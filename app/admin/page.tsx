@@ -10,9 +10,9 @@ import { PurchaseTab } from "@/components/admin/purchase-tab";
 import { SalesTab } from "@/components/admin/sales-tab";
 import { StockTab } from "@/components/admin/stock-tab";
 import { DashboardTab } from "@/components/admin/dashboard-tab";
-import { HistoryTabs } from "@/components/admin/history-tabs";
+import { ServicesHistoryTab, BatteriesHistoryTab } from "@/components/admin/history-tabs";
 import { CatalogTab } from "@/components/admin/catalog-tab";
-import { useAppStore } from "@/lib/store";
+import { useAvexStore } from "@/lib/store";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<TabType>("servicios");
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { initializeMockData } = useAppStore();
+  const { initializeMockData } = useAvexStore();
 
   useEffect(() => {
     // Initialize mock data and simulate loading
@@ -64,7 +64,12 @@ export default function AdminPage() {
       case "dashboard":
         return <DashboardTab />;
       case "historial":
-        return <HistoryTabs />;
+        return (
+          <div className="space-y-6">
+            <ServicesHistoryTab />
+            <BatteriesHistoryTab />
+          </div>
+        );
       case "catalogo":
         return <CatalogTab />;
       default:

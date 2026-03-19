@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { RiderView } from "@/components/rider/rider-view";
 import { LoadingScreen } from "@/components/layout/loading-screen";
-import { useAppStore } from "@/lib/store";
+import { useAvexStore } from "@/lib/store";
 
 export default function RiderPage() {
   const [isLoading, setIsLoading] = useState(true);
-  const { initializeMockData } = useAppStore();
+  const { initializeMockData } = useAvexStore();
 
   useEffect(() => {
     initializeMockData();

@@ -79,6 +79,7 @@ interface AvexStore extends AppState {
   // Actions - Bulk
   setFullState: (state: Partial<AppState>) => void;
   reset: () => void;
+  initializeMockData: () => void;
 }
 
 // --- Store ---
@@ -234,10 +235,71 @@ export const useAvexStore = create<AvexStore>()(
           ...newState,
         })),
 
-      reset: () => set(initialState),
-    }),
-    {
-      name: "avex-storage",
+reset: () => set(initialState),
+
+  // Initialize mock data for development
+  initializeMockData: () => {
+    const state = get();
+    // Only initialize if no services exist
+    if (Object.keys(state.servicios).length === 0) {
+      const mockServices: Record<string, Service> = {
+        "svc-1": {
+          id: "svc-1",
+          orden: 1,
+          cliente: "Juan Perez",
+          telefono: "1155667788",
+          direccion: "Av. Corrientes 1234, CABA",
+          marca: "Toyota",
+          modelo: "Corolla",
+          patente: "ABC123",
+          aseguradora: "La Caja",
+          rider: "Nicolas",
+          tipoServicio: "Bateria",
+          estado: "Pendiente",
+          cobro: "Pendiente",
+          monto: 15000,
+          fechaVisual: "18/03/2026",
+          fechaInput: "2026-03-18",
+          tiempos: { creado: "09:30" },
+          obs: "Cliente espera en la puerta",
+        },
+        "svc-2": {
+          id: "svc-2",
+          orden: 2,
+          cliente: "Maria Garcia",
+          telefono: "1144332211",
+          direccion: "Av. Santa Fe 2500, CABA",
+          marca: "Ford",
+          modelo: "Focus",
+          patente: "DEF456",
+          aseguradora: "Avex",
+          rider: "Santiago",
+          tipoServicio: "Auxilio",
+          estado: "En camino",
+          cobro: "Pendiente",
+          monto: 8000,
+          fechaVisual: "18/03/2026",
+          fechaInput: "2026-03-18",
+          tiempos: { creado: "10:00", camino: "10:15" },
+          obs: "",
+        },
+      };
+      set({ servicios: mockServices });
+    }
+
+    // Initialize inventory if empty
+    if (Object.keys(state.inventario).length === 0) {
+      const mockInventory: InventoryState = {
+        "12x75": { loteCounter: 3, lotes: [{ id: 1, cantidad: 5, costo: 45000 }, { id: 2, cantidad: 3, costo: 47000 }] },
+        "12x65": { loteCounter: 2, lotes: [{ id: 1, cantidad: 8, costo: 38000 }] },
+        "12x45": { loteCounter: 1, lotes: [] },
+      };
+      set({ inventario: mockInventory });
+    }
+  },
+  }),
+  {
+  name: "avex-storage",
       partialize: (state) => ({
         config: state.config,
         inventario: state.inventario,

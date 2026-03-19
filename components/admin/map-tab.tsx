@@ -1,48 +1,33 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Maximize2, MapPin, Navigation, Clock, Phone, User } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { Maximize2, MapPin, Navigation, Clock, Phone, User, X } from "lucide-react";
+import { useAvexStore, selectActiveServices } from "@/lib/store";
 import type { Service } from "@/lib/types";
+import { getGoogleMapsUrl } from "@/lib/helpers";
 
 export function MapTab() {
-  const { pendingServices, inProgressServices } = useAppStore();
+  const activeServices = useAvexStore(selectActiveServices);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-
-  const allServices = [...pendingServices, ...inProgressServices];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "pending":
+      case "Pendiente":
         return "bg-amber-500";
-      case "assigned":
+      case "En camino":
         return "bg-blue-500";
-      case "in_progress":
+      case "En lugar":
         return "bg-green-500";
       default:
-        return "bg-gray-500";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Pendiente";
-      case "assigned":
-        return "Asignado";
-      case "in_progress":
-        return "En Progreso";
-      default:
-        return status;
+        return "bg-muted-foreground";
     }
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-180px)]">
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-200px)]">
       {/* Map Container */}
       <Card className="flex-1 min-h-[400px]">
         <CardHeader className="flex flex-row items-center justify-between py-3">
@@ -53,11 +38,8 @@ export function MapTab() {
           </Button>
         </CardHeader>
         <CardContent className="p-0 h-[calc(100%-60px)]">
-          <div
-            ref={mapContainerRef}
-            className="w-full h-full bg-muted/30 flex items-center justify-center relative"
-          >
-            {/* Placeholder for map - In production, use Leaflet or similar */}
+          <div className="w-full h-full bg-muted/30 flex items-center justify-center relative">
+            {/* Placeholder for map - In production, use Leaflet */}
             <div className="text-center text-muted-foreground">
               <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Mapa interactivo</p>
@@ -67,18 +49,18 @@ export function MapTab() {
             </div>
 
             {/* Service markers overlay */}
-            {allServices.map((service, index) => (
+            {activeServices.map((service, index) => (
               <button
                 key={service.id}
                 onClick={() => setSelectedService(service)}
                 className={`absolute w-8 h-8 rounded-full ${getStatusColor(
-                  service.status
+                  service.estado
                 )} text-white flex items-center justify-center text-xs font-bold shadow-lg hover:scale-110 transition-transform cursor-pointer`}
                 style={{
                   top: `${20 + (index * 15) % 60}%`,
                   left: `${20 + (index * 20) % 60}%`,
                 }}
-                title={service.clientName}
+                title={service.cliente}
               >
                 {index + 1}
               </button>
@@ -93,18 +75,18 @@ export function MapTab() {
           <CardTitle className="text-lg flex items-center gap-2">
             <Navigation className="h-5 w-5" />
             Servicios Activos
-            <Badge variant="secondary">{allServices.length}</Badge>
+            <Badge variant="secondary">{activeServices.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0 flex-1 overflow-auto">
-          {allServices.length === 0 ? (
+          {activeServices.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">No hay servicios activos</p>
             </div>
           ) : (
             <div className="divide-y">
-              {allServices.map((service) => (
+              {activeServices.map((service) => (
                 <button
                   key={service.id}
                   onClick={() => setSelectedService(service)}
@@ -116,9 +98,9 @@ export function MapTab() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge
-                          className={`${getStatusColor(service.status)} text-white text-xs`}
+                          className={`${getStatusColor(service.estado)} text-white text-xs`}
                         >
-                          {getStatusLabel(service.status)}
+                          {service.estado}
                         </Badge>
                         {service.rider && (
                           <span className="text-xs text-muted-foreground truncate">
@@ -127,10 +109,10 @@ export function MapTab() {
                         )}
                       </div>
                       <p className="font-medium text-sm truncate">
-                        {service.clientName}
+                        {service.cliente}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {service.address}
+                        {service.direccion}
                       </p>
                     </div>
                   </div>
@@ -150,20 +132,20 @@ export function MapTab() {
                 <CardTitle className="text-lg">Detalle del Servicio</CardTitle>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={() => setSelectedService(null)}
                 >
-                  Cerrar
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-2">
-                <Badge className={`${getStatusColor(selectedService.status)} text-white`}>
-                  {getStatusLabel(selectedService.status)}
+                <Badge className={`${getStatusColor(selectedService.estado)} text-white`}>
+                  {selectedService.estado}
                 </Badge>
-                {selectedService.serviceType && (
-                  <Badge variant="outline">{selectedService.serviceType}</Badge>
+                {selectedService.tipoServicio && (
+                  <Badge variant="outline">{selectedService.tipoServicio}</Badge>
                 )}
               </div>
 
@@ -171,10 +153,10 @@ export function MapTab() {
                 <div className="flex items-start gap-3">
                   <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">{selectedService.clientName}</p>
-                    {selectedService.company && (
+                    <p className="font-medium">{selectedService.cliente}</p>
+                    {selectedService.aseguradora && (
                       <p className="text-sm text-muted-foreground">
-                        {selectedService.company}
+                        {selectedService.aseguradora}
                       </p>
                     )}
                   </div>
@@ -182,47 +164,54 @@ export function MapTab() {
 
                 <div className="flex items-start gap-3">
                   <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                  <p>{selectedService.phone}</p>
+                  <p>{selectedService.telefono}</p>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                  <p className="text-sm">{selectedService.address}</p>
+                  <p className="text-sm">{selectedService.direccion}</p>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <Clock className="h-4 w-4 mt-0.5 text-muted-foreground" />
                   <p className="text-sm">
-                    {new Date(selectedService.createdAt).toLocaleString("es-AR")}
+                    Creado: {selectedService.tiempos?.creado || "-"}
                   </p>
                 </div>
               </div>
 
-              {selectedService.vehicleInfo && (
+              {(selectedService.marca || selectedService.modelo) && (
                 <div className="pt-2 border-t">
-                  <p className="text-sm font-medium mb-1">Vehículo</p>
+                  <p className="text-sm font-medium mb-1">Vehiculo</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedService.vehicleInfo.brand} {selectedService.vehicleInfo.model}
-                    {selectedService.vehicleInfo.plate && ` - ${selectedService.vehicleInfo.plate}`}
+                    {selectedService.marca} {selectedService.modelo}
+                    {selectedService.patente && ` - ${selectedService.patente}`}
                   </p>
                 </div>
               )}
 
-              {selectedService.observations && (
+              {selectedService.obs && (
                 <div className="pt-2 border-t">
                   <p className="text-sm font-medium mb-1">Observaciones</p>
                   <p className="text-sm text-muted-foreground">
-                    {selectedService.observations}
+                    {selectedService.obs}
                   </p>
                 </div>
               )}
 
               <div className="flex gap-2 pt-2">
-                <Button className="flex-1" variant="outline">
+                <Button
+                  className="flex-1"
+                  variant="outline"
+                  onClick={() => window.open(`tel:${selectedService.telefono}`, "_self")}
+                >
                   <Phone className="h-4 w-4 mr-2" />
                   Llamar
                 </Button>
-                <Button className="flex-1">
+                <Button
+                  className="flex-1"
+                  onClick={() => window.open(getGoogleMapsUrl(selectedService.direccion), "_blank")}
+                >
                   <Navigation className="h-4 w-4 mr-2" />
                   Navegar
                 </Button>
