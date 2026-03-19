@@ -1,17 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Maximize2, MapPin, Navigation, Clock, Phone, User, X } from "lucide-react";
-import { useAvexStore, selectActiveServices } from "@/lib/store";
+import { useAvexStore } from "@/lib/store";
 import type { Service } from "@/lib/types";
 import { getGoogleMapsUrl } from "@/lib/helpers";
 
 export function MapTab() {
-  const activeServices = useAvexStore(selectActiveServices);
+  const servicios = useAvexStore((state) => state.servicios);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  const activeServices = useMemo(() => 
+    Object.values(servicios).filter(
+      (s) => s.estado !== "Finalizado" && s.estado !== "Cancelado" && s.estado !== "Programado"
+    ),
+    [servicios]
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -11,6 +11,7 @@ import { useAvexStore } from "@/lib/store";
 import { BATTERY_MODELS } from "@/lib/types";
 
 export function StockTab() {
+  // Get inventory state from the store
   const inventario = useAvexStore((state) => state.inventario);
   const [searchTerm, setSearchTerm] = useState("");
   const [isQuickPurchaseOpen, setIsQuickPurchaseOpen] = useState(false);

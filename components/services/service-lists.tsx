@@ -19,9 +19,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { useAvexStore, selectActiveServices, selectScheduledServices } from "@/lib/store";
+import { useAvexStore } from "@/lib/store";
 import type { Service, ServiceStatus } from "@/lib/types";
 import { getCurrentMoment, getGoogleMapsUrl, getWhatsAppUrl, inputToVisualDate } from "@/lib/helpers";
 import {
@@ -255,10 +255,26 @@ function ScheduledServiceCard({
 }
 
 export function ServiceLists() {
-  const activeServices = useAvexStore(selectActiveServices);
-  const scheduledServices = useAvexStore(selectScheduledServices);
+  const servicios = useAvexStore((state) => state.servicios);
   const updateService = useAvexStore((state) => state.updateService);
   const deleteService = useAvexStore((state) => state.deleteService);
+
+  // Memoize filtered lists to prevent infinite re-renders
+  const activeServices = useMemo(
+    () =>
+      Object.values(servicios).filter(
+        (s) =>
+          s.estado !== "Finalizado" &&
+          s.estado !== "Cancelado" &&
+          s.estado !== "Programado"
+      ),
+    [servicios]
+  );
+
+  const scheduledServices = useMemo(
+    () => Object.values(servicios).filter((s) => s.estado === "Programado"),
+    [servicios]
+  );
 
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [closingService, setClosingService] = useState<Service | null>(null);

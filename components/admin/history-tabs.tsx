@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useAvexStore, selectCompletedServices } from "@/lib/store";
+import { useAvexStore } from "@/lib/store";
 import type { Service } from "@/lib/types";
 import { getCurrentMoment, getGoogleMapsUrl } from "@/lib/helpers";
 import {
@@ -125,12 +125,19 @@ function ServiceHistoryItem({
 }
 
 export function ServicesHistoryTab() {
-  const completedServices = useAvexStore(selectCompletedServices);
+  const servicios = useAvexStore((state) => state.servicios);
   const deleteService = useAvexStore((state) => state.deleteService);
   
   const [filterMonth, setFilterMonth] = useState("");
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
+
+  const completedServices = useMemo(() => 
+    Object.values(servicios).filter(
+      (s) => s.estado === "Finalizado" || s.estado === "Cancelado"
+    ),
+    [servicios]
+  );
 
   const filteredServices = completedServices.filter((s) => {
     if (!filterMonth) return true;
