@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Zap, Monitor, Smartphone } from "lucide-react";
+import { Moon, Sun, Zap, Monitor, Smartphone, LogOut } from "lucide-react";
 import { useAvexStore } from "@/lib/store";
+import { useRouter } from "next/navigation";
 
 export function Header() {
-  const { currentView, setView, isDarkMode, toggleDarkMode } = useAvexStore();
+  const { currentView, setView, isDarkMode, toggleDarkMode, logout } = useAvexStore();
+  const router = useRouter();
   const [clock, setClock] = useState("00:00:00");
 
   useEffect(() => {
@@ -61,31 +63,33 @@ export function Header() {
           </Button>
 
           <Button
-            variant={currentView === "admin" ? "secondary" : "outline"}
+            variant="outline"
             size="sm"
             onClick={() => setView("admin")}
-            className={
-              currentView === "admin"
-                ? "font-bold"
-                : "border-muted-foreground/30 text-white hover:bg-white/10 hover:text-white font-bold"
-            }
+            className="bg-black text-yellow-400 border-black hover:bg-black/80 hover:text-yellow-300 font-bold"
           >
             <Monitor className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Panel Base</span>
           </Button>
 
           <Button
-            variant={currentView === "rider" ? "default" : "outline"}
+            variant="outline"
             size="sm"
             onClick={() => setView("rider")}
-            className={
-              currentView === "rider"
-                ? "btn-avex"
-                : "border-muted-foreground/30 text-white hover:bg-white/10 hover:text-white font-bold"
-            }
+            className="bg-black text-yellow-400 border-black hover:bg-black/80 hover:text-yellow-300 font-bold"
           >
             <Smartphone className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">App Rider</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { logout(); router.push("/login"); }}
+            className="text-slate-400 hover:text-white hover:bg-white/10 font-bold"
+            title="Cerrar sesión"
+          >
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>

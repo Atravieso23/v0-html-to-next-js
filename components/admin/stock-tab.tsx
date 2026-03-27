@@ -8,17 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Download, Upload, Package, AlertTriangle } from "lucide-react";
 import { useAvexStore } from "@/lib/store";
-import { BATTERY_MODELS } from "@/lib/types";
 
 export function StockTab() {
   // Get inventory state from the store
   const inventario = useAvexStore((state) => state.inventario);
+  const batteryModels = useAvexStore((state) => state.batteryModels);
   const [searchTerm, setSearchTerm] = useState("");
   const [isQuickPurchaseOpen, setIsQuickPurchaseOpen] = useState(false);
 
   // Process inventory data
   const stockData = useMemo(() => {
-    return BATTERY_MODELS.map((modelo) => {
+    return batteryModels.map((modelo) => {
       const bat = inventario[modelo];
       const totalQuantity = bat?.lotes?.reduce((sum, lote) => sum + lote.cantidad, 0) || 0;
       const avgCost = bat?.lotes?.length
@@ -32,7 +32,7 @@ export function StockTab() {
         lotes: bat?.lotes || [],
       };
     });
-  }, [inventario]);
+  }, [inventario, batteryModels]);
 
   const filteredStock = stockData.filter((item) =>
     item.modelo.toLowerCase().includes(searchTerm.toLowerCase())

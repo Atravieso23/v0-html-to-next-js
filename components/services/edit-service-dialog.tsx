@@ -24,7 +24,6 @@ import { useAvexStore } from "@/lib/store";
 import {
   INSURANCE_PROVIDERS,
   SERVICE_TYPES,
-  RIDERS,
   type Service,
   type ServiceStatus,
 } from "@/lib/types";
@@ -46,6 +45,7 @@ interface EditServiceDialogProps {
 
 export function EditServiceDialog({ service, open, onOpenChange }: EditServiceDialogProps) {
   const updateService = useAvexStore((state) => state.updateService);
+  const riders = useAvexStore((state) => state.riders);
   const [formData, setFormData] = useState<Partial<Service>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -227,7 +227,7 @@ export function EditServiceDialog({ service, open, onOpenChange }: EditServiceDi
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {RIDERS.map((r) => (
+                  {riders.map((r) => (
                     <SelectItem key={r} value={r}>
                       {r}
                     </SelectItem>

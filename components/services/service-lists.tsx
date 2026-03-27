@@ -37,7 +37,6 @@ import {
   Trash2,
   Edit,
 } from "lucide-react";
-import { RIDER_COLORS } from "@/lib/types";
 import { EditServiceDialog } from "./edit-service-dialog";
 import { CloseServiceDialog } from "./close-service-dialog";
 
@@ -53,7 +52,8 @@ function ServiceCard({
   onDelete: () => void;
 }) {
   const updateService = useAvexStore((state) => state.updateService);
-  const riderColor = RIDER_COLORS[service.rider] || "#666";
+  const riderColors = useAvexStore((state) => state.riderColors);
+  const riderColor = riderColors[service.rider] || "#666";
 
   const getStatusBadge = (estado: ServiceStatus) => {
     const variants: Record<ServiceStatus, { variant: "default" | "secondary" | "destructive" | "outline"; label: string }> = {
@@ -215,7 +215,8 @@ function ScheduledServiceCard({
   onActivate: () => void;
   onDelete: () => void;
 }) {
-  const riderColor = RIDER_COLORS[service.rider] || "#666";
+  const riderColors = useAvexStore((state) => state.riderColors);
+  const riderColor = riderColors[service.rider] || "#666";
 
   return (
     <Card className="p-3 border-0 border-l-4 border-l-muted-foreground/50 shadow-sm bg-muted/30">

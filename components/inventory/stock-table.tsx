@@ -12,16 +12,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useAvexStore, selectTotalStock } from "@/lib/store";
-import { BATTERY_MODELS } from "@/lib/types";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import { QuickPurchaseDialog } from "./quick-purchase-dialog";
 
 export function StockTable() {
   const inventario = useAvexStore((state) => state.inventario);
+  const batteryModels = useAvexStore((state) => state.batteryModels);
   const [showQuickPurchase, setShowQuickPurchase] = useState(false);
 
-  const stockData = BATTERY_MODELS.map((modelo) => {
+  const stockData = batteryModels.map((modelo) => {
     const bat = inventario[modelo];
     const total = bat?.lotes?.reduce((sum, l) => sum + l.cantidad, 0) || 0;
     const activeLot = bat?.lotes?.[0];

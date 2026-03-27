@@ -13,6 +13,7 @@ import {
   History,
   Settings,
   FileText,
+  Users,
 } from "lucide-react";
 
 interface NavItem {
@@ -34,6 +35,7 @@ const adminNav: NavItem[] = [
   { id: "historial-baterias", label: "Historial Baterias", icon: <History className="h-4 w-4" /> },
   { id: "catalogo", label: "Catalogo y Precios", icon: <Settings className="h-4 w-4" /> },
   { id: "garantias", label: "Generar Garantia", icon: <FileText className="h-4 w-4" /> },
+  { id: "usuarios", label: "Usuarios", icon: <Users className="h-4 w-4" /> },
 ];
 
 export function AdminSidebar() {

@@ -18,7 +18,7 @@ import {
 } from "recharts";
 import { useAvexStore } from "@/lib/store";
 import { calculateDashboardStats, formatCurrency, getCurrentMoment } from "@/lib/helpers";
-import { RIDERS, type RiderName } from "@/lib/types";
+import type { RiderName } from "@/lib/types";
 import { Car, Battery, TrendingUp, DollarSign, AlertTriangle, Users, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,13 +26,16 @@ export function DashboardTab() {
   const servicios = useAvexStore((state) => state.servicios);
   const historiales = useAvexStore((state) => state.historiales);
   const inventario = useAvexStore((state) => state.inventario);
+  const comisionRider = useAvexStore((state) => state.config.comisionRider);
+  const riders = useAvexStore((state) => state.riders);
+  const riderColors = useAvexStore((state) => state.riderColors);
 
   const [filterMonth, setFilterMonth] = useState(() => getCurrentMoment().fechaInput.substring(0, 7));
 
   // Calculate stats
   const stats = useMemo(
-    () => calculateDashboardStats(servicios, historiales.ventas, filterMonth),
-    [servicios, historiales.ventas, filterMonth]
+    () => calculateDashboardStats(servicios, historiales.ventas, filterMonth, comisionRider, riders),
+    [servicios, historiales.ventas, filterMonth, comisionRider, riders]
   );
 
   // Calculate chart data
@@ -83,16 +86,82 @@ export function DashboardTab() {
 
   // Rider ranking
   const riderRanking = useMemo(() => {
-    return RIDERS.map((rider) => ({
+    return riders.map((rider) => ({
       rider,
       servicios: stats.riders[rider]?.servicios || 0,
       baterias: stats.riders[rider]?.baterias || 0,
       total: (stats.riders[rider]?.servicios || 0) + (stats.riders[rider]?.baterias || 0),
     })).sort((a, b) => b.total - a.total);
-  }, [stats.riders]);
+  }, [stats.riders, riders]);
 
-  const handleExportExcel = () => {
-    toast.info("Funcionalidad de exportacion a Excel disponible con integracion de backend");
+  const handleExportExcel = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      const wb = XLSX.utils.book_new();
+      const [year, month] = filterMonth.split("-");
+      const monthLabel = `${month}/${year}`;
+
+      // Hoja 1: Resumen
+      const resumen = [
+        ["AVEX - Resumen del mes", monthLabel],
+        [],
+        ["Métrica", "Valor"],
+        ["Ingresos Servicios", stats.ingresosServicios],
+        ["Facturación Baterías", stats.facturacionBaterias],
+        ["Ganancia Baterías", stats.gananciaBaterias],
+        ["Total Servicios", stats.auxilios],
+        ["Total Baterías vendidas", stats.baterias],
+      ];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(resumen), "Resumen");
+
+      // Hoja 2: Servicios del mes
+      const svcsData = Object.values(servicios)
+        .filter((s) => {
+          const m = (s.fechaFinInput || s.fechaInput || "").substring(0, 7);
+          return !filterMonth || m === filterMonth;
+        })
+        .map((s) => ({
+          Fecha: s.fechaVisual,
+          Cliente: s.cliente,
+          Patente: s.patente || "",
+          Tipo: s.tipo,
+          Rider: s.rider,
+          Monto: s.monto,
+          Cobro: s.cobro || "",
+          Estado: s.estado,
+        }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(svcsData), "Servicios");
+
+      // Hoja 3: Ventas de baterías del mes
+      const ventasData = historiales.ventas
+        .filter((v) => !filterMonth || v.fechaInput.startsWith(filterMonth))
+        .map((v) => ({
+          Fecha: v.fechaVisual,
+          Cliente: v.cliente,
+          Patente: v.patente || "",
+          Batería: v.modeloBat,
+          Vehículo: v.autoTexto,
+          Pago: v.metodoPago,
+          Rider: v.rider,
+          Total: v.total,
+          "Costo Lote": v.costoLote,
+        }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ventasData), "Ventas Baterías");
+
+      // Hoja 4: Ranking riders
+      const ridersData = riderRanking.map((r) => ({
+        Rider: r.rider,
+        Servicios: r.servicios,
+        Baterías: r.baterias,
+        Total: r.total,
+      }));
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ridersData), "Riders");
+
+      XLSX.writeFile(wb, `AVEX_${monthLabel.replace("/", "-")}.xlsx`);
+      toast.success("Archivo Excel generado correctamente");
+    } catch {
+      toast.error("Error al generar el Excel");
+    }
   };
 
   // Chart colors - computed in JS

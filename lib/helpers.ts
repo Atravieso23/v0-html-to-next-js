@@ -3,7 +3,7 @@
 // ============================================================================
 
 import type { CurrentMoment, Service, DashboardStats, RiderName } from "./types";
-import { RIDERS } from "./types";
+import { RIDERS } from "./types";  // Used as default value only
 
 /**
  * Obtiene el momento actual formateado
@@ -136,7 +136,9 @@ export async function geocodeAddress(
 export function calculateDashboardStats(
   servicios: Record<string, Service>,
   ventas: { total: number; costoLote: number; rider: RiderName; fechaInput: string }[],
-  filterMonth?: string
+  filterMonth?: string,
+  comisionRider = 10000,
+  ridersList: string[] = RIDERS
 ): DashboardStats {
   const stats: DashboardStats = {
     ingresosServicios: 0,
@@ -144,7 +146,7 @@ export function calculateDashboardStats(
     gananciaBaterias: 0,
     auxilios: 0,
     baterias: 0,
-    riders: RIDERS.reduce(
+    riders: ridersList.reduce(
       (acc, rider) => {
         acc[rider] = { servicios: 0, baterias: 0 };
         return acc;
@@ -170,12 +172,11 @@ export function calculateDashboardStats(
   });
 
   // Procesar ventas de baterías
-  const COMISION_RIDER = 10000;
   ventas.forEach((v) => {
     const monthMatch = !filterMonth || v.fechaInput.startsWith(filterMonth);
     if (monthMatch) {
       stats.facturacionBaterias += v.total || 0;
-      stats.gananciaBaterias += (v.total || 0) - (v.costoLote || 0) - COMISION_RIDER;
+      stats.gananciaBaterias += (v.total || 0) - (v.costoLote || 0) - comisionRider;
       stats.baterias++;
       if (stats.riders[v.rider]) {
         stats.riders[v.rider].baterias++;

@@ -4,11 +4,11 @@
 // ============================================================================
 
 // --- Riders ---
-export type RiderName = "Andrés" | "Sergio" | "Abraham";
+export type RiderName = string;
 
 export const RIDERS: RiderName[] = ["Andrés", "Sergio", "Abraham"];
 
-export const RIDER_COLORS: Record<RiderName, string> = {
+export const RIDER_COLORS: Record<string, string> = {
   "Andrés": "#0dcaf0",
   "Sergio": "#fd7e14",
   "Abraham": "#198754",
@@ -142,6 +142,25 @@ export interface BatteryPurchase {
   tipo?: "Rapida" | "Avanzada";
 }
 
+// --- Garantías ---
+export type WarrantyStatus = "Vigente" | "Vencida" | "Reclamada";
+
+export interface Warranty {
+  id: string;
+  fechaVenta: string;        // YYYY-MM-DD
+  fechaVentaVisual: string;  // DD/MM/YYYY
+  fechaVencimiento: string;  // YYYY-MM-DD
+  fechaVencimientoVisual: string;
+  cliente: string;
+  celular?: string;
+  patente?: string;
+  autoTexto: string;
+  modeloBat: string;
+  mesesGarantia: number;
+  estado: WarrantyStatus;
+  notaReclamo?: string;
+}
+
 // --- Historiales ---
 export interface HistoryState {
   ventas: BatterySale[];
@@ -158,6 +177,8 @@ export interface SurchargeConfig {
 export interface AppConfig {
   preciosBase: Record<string, number>;
   recargos: SurchargeConfig;
+  comisionRider: number;
+  adminPassword: string;
 }
 
 // --- Estado Global ---
@@ -166,6 +187,18 @@ export interface AppState {
   inventario: InventoryState;
   servicios: Record<string, Service>;
   historiales: HistoryState;
+}
+
+// --- Usuarios / Roles ---
+export type UserRole = "admin" | "rider";
+
+export interface AppUser {
+  id: string;
+  email: string;
+  password: string;
+  name: string;
+  role: UserRole;
+  riderName?: string; // solo si role === "rider"
 }
 
 // --- Vistas ---
@@ -179,7 +212,8 @@ export type AdminTab =
   | "historial-servicios"
   | "historial-baterias"
   | "catalogo"
-  | "garantias";
+  | "garantias"
+  | "usuarios";
 
 // --- Momento Actual ---
 export interface CurrentMoment {

@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAvexStore } from "@/lib/store";
-import { BATTERY_MODELS } from "@/lib/types";
 import { getCurrentMoment, calculateAdvancedPurchase, inputToVisualDate } from "@/lib/helpers";
 
 export function PurchaseTab() {
@@ -22,12 +21,13 @@ export function PurchaseTab() {
   const addPurchase = useAvexStore((state) => state.addPurchase);
   const updatePrices = useAvexStore((state) => state.updatePrices);
   const preciosBase = useAvexStore((state) => state.config.preciosBase);
+  const batteryModels = useAvexStore((state) => state.batteryModels);
 
   const [formData, setFormData] = useState({
     proveedor: "",
     factura: "",
     fecha: "",
-    modelo: BATTERY_MODELS[0],
+    modelo: "",
     modeloNuevo: "",
     cantidad: "1",
     montoUnitarioSinIva: "0",
@@ -126,7 +126,7 @@ export function PurchaseTab() {
         proveedor: "",
         factura: "",
         fecha: "",
-        modelo: BATTERY_MODELS[0],
+        modelo: "",
         modeloNuevo: "",
         cantidad: "1",
         montoUnitarioSinIva: "0",
@@ -198,7 +198,7 @@ export function PurchaseTab() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {BATTERY_MODELS.map((m) => (
+              {batteryModels.map((m) => (
                 <SelectItem key={m} value={m}>
                   {m}
                 </SelectItem>

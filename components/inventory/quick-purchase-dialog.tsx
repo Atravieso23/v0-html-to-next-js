@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAvexStore } from "@/lib/store";
-import { BATTERY_MODELS } from "@/lib/types";
 import { getCurrentMoment } from "@/lib/helpers";
 import { Plus, X } from "lucide-react";
 
@@ -39,13 +38,14 @@ interface QuickPurchaseDialogProps {
 export function QuickPurchaseDialog({ open, onOpenChange }: QuickPurchaseDialogProps) {
   const addBatteryStock = useAvexStore((state) => state.addBatteryStock);
   const addPurchase = useAvexStore((state) => state.addPurchase);
+  const batteryModels = useAvexStore((state) => state.batteryModels);
   const [rows, setRows] = useState<PurchaseRow[]>([
-    { id: Date.now(), modelo: BATTERY_MODELS[0], cantidad: "", costo: "" },
+    { id: Date.now(), modelo: batteryModels[0] ?? "", cantidad: "", costo: "" },
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const addRow = () => {
-    setRows([...rows, { id: Date.now(), modelo: BATTERY_MODELS[0], cantidad: "", costo: "" }]);
+    setRows([...rows, { id: Date.now(), modelo: batteryModels[0] ?? "", cantidad: "", costo: "" }]);
   };
 
   const removeRow = (id: number) => {
@@ -90,7 +90,7 @@ export function QuickPurchaseDialog({ open, onOpenChange }: QuickPurchaseDialogP
         });
 
         toast.success("Stock ingresado correctamente");
-        setRows([{ id: Date.now(), modelo: BATTERY_MODELS[0], cantidad: "", costo: "" }]);
+        setRows([{ id: Date.now(), modelo: batteryModels[0] ?? "", cantidad: "", costo: "" }]);
         onOpenChange(false);
       } else {
         toast.warning("Verifica que las cantidades sean mayores a 0");
@@ -131,7 +131,7 @@ export function QuickPurchaseDialog({ open, onOpenChange }: QuickPurchaseDialogP
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {BATTERY_MODELS.map((m) => (
+                      {batteryModels.map((m) => (
                         <SelectItem key={m} value={m}>
                           {m}
                         </SelectItem>

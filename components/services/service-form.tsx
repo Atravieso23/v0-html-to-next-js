@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,41 +12,49 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Clipboard, MapPin } from "lucide-react";
+import {
+  Clipboard, MapPin, User, Phone, Car, Hash,
+  Wrench, DollarSign, UserCheck, FileText,
+  Calendar, Clock, Zap, ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAvexStore } from "@/lib/store";
 import {
-  INSURANCE_PROVIDERS,
-  SERVICE_TYPES,
-  RIDERS,
-  CAR_BRANDS,
-  type InsuranceProvider,
-  type ServiceType,
-  type RiderName,
+  INSURANCE_PROVIDERS, SERVICE_TYPES, CAR_BRANDS,
+  type InsuranceProvider, type ServiceType, type RiderName,
 } from "@/lib/types";
 import { getCurrentMoment, generateId, geocodeAddress, parseInsuranceText } from "@/lib/helpers";
 import { PasteTextDialog } from "./paste-text-dialog";
 import { MapPreviewDialog } from "./map-preview-dialog";
 
+const SERVICE_ICONS: Record<string, string> = {
+  Arranque: "⚡", Inflado: "🔧", "Cambio Rueda": "🔄", Cerrajería: "🔑",
+};
+
+function FieldLabel({ icon, label, required }: {
+  icon?: React.ReactNode; label: string; required?: boolean;
+}) {
+  return (
+    <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-600 flex items-center gap-1.5 mb-1.5">
+      {icon && <span className="text-amber-500">{icon}</span>}
+      {label}
+      {required && <span className="text-amber-500">*</span>}
+    </Label>
+  );
+}
+
 export function ServiceForm() {
   const addService = useAvexStore((state) => state.addService);
   const servicios = useAvexStore((state) => state.servicios);
+  const riders = useAvexStore((state) => state.riders);
+  const riderColors = useAvexStore((state) => state.riderColors);
 
   const [formData, setFormData] = useState({
     aseguradora: "Avex" as InsuranceProvider,
-    cliente: "",
-    celular: "",
-    marca: "",
-    modelo: "",
-    patente: "",
-    direccion: "",
-    tipoServicio: "" as ServiceType | "",
-    monto: "",
-    riderAsignado: "" as RiderName | "",
-    notas: "",
-    esProgramado: false,
-    fechaProgramada: "",
-    horaProgramada: "",
+    cliente: "", celular: "", marca: "", modelo: "", patente: "",
+    direccion: "", tipoServicio: "" as ServiceType | "", monto: "",
+    riderAsignado: "" as RiderName | "", notas: "",
+    esProgramado: false, fechaProgramada: "", horaProgramada: "",
   });
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -60,80 +66,43 @@ export function ServiceForm() {
 
   const handleSubmit = async () => {
     const newErrors: Record<string, boolean> = {};
-    
     if (!formData.direccion) newErrors.direccion = true;
     if (!formData.tipoServicio) newErrors.tipoServicio = true;
     if (!formData.monto) newErrors.monto = true;
     if (!formData.riderAsignado) newErrors.riderAsignado = true;
     if (formData.esProgramado && (!formData.fechaProgramada || !formData.horaProgramada)) {
-      toast.warning("Completa fecha y hora para agendar.");
-      return;
+      toast.warning("Completá fecha y hora para agendar."); return;
     }
-
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-
     setIsSubmitting(true);
-
     try {
       const coords = await geocodeAddress(formData.direccion);
       const momento = getCurrentMoment();
       const id = generateId();
       const orden = Object.keys(servicios).length + 1;
-
       addService({
-        id,
-        aseguradora: formData.aseguradora,
-        cliente: formData.cliente || "Sin nombre",
-        celular: formData.celular,
-        marca: formData.marca,
-        modelo: formData.modelo,
-        patente: formData.patente.toUpperCase(),
-        direccion: formData.direccion,
-        tipo: formData.tipoServicio as ServiceType,
-        monto: parseFloat(formData.monto) || 0,
-        rider: formData.riderAsignado as RiderName,
-        notas: formData.notas,
+        id, aseguradora: formData.aseguradora, cliente: formData.cliente || "Sin nombre",
+        celular: formData.celular, marca: formData.marca, modelo: formData.modelo,
+        patente: formData.patente.toUpperCase(), direccion: formData.direccion,
+        tipo: formData.tipoServicio as ServiceType, monto: parseFloat(formData.monto) || 0,
+        rider: formData.riderAsignado as RiderName, notas: formData.notas,
         estado: formData.esProgramado ? "Programado" : "Pendiente",
-        lat: coords?.lat,
-        lng: coords?.lng,
-        orden,
-        tiempos: {
-          creado: momento.completa,
-        },
-        fechaVisual: momento.fechaLegible,
-        fechaInput: momento.fechaInput,
+        lat: coords?.lat, lng: coords?.lng, orden,
+        tiempos: { creado: momento.completa },
+        fechaVisual: momento.fechaLegible, fechaInput: momento.fechaInput,
         esProgramado: formData.esProgramado,
-        fechaProgramada: formData.fechaProgramada,
-        horaProgramada: formData.horaProgramada,
+        fechaProgramada: formData.fechaProgramada, horaProgramada: formData.horaProgramada,
       });
-
-      toast.success(
-        formData.esProgramado
-          ? "Viaje programado correctamente"
-          : `Viaje asignado a ${formData.riderAsignado}`
-      );
-
-      // Reset form
+      toast.success(formData.esProgramado ? "✓ Viaje programado" : `✓ Asignado a ${formData.riderAsignado}`);
       setFormData({
-        aseguradora: "Avex",
-        cliente: "",
-        celular: "",
-        marca: "",
-        modelo: "",
-        patente: "",
-        direccion: "",
-        tipoServicio: "",
-        monto: "",
-        riderAsignado: "",
-        notas: "",
-        esProgramado: false,
-        fechaProgramada: "",
-        horaProgramada: "",
+        aseguradora: "Avex", cliente: "", celular: "", marca: "", modelo: "", patente: "",
+        direccion: "", tipoServicio: "", monto: "", riderAsignado: "", notas: "",
+        esProgramado: false, fechaProgramada: "", horaProgramada: "",
       });
+      setErrors({});
     } catch (error) {
-      toast.error("Error al crear el servicio");
-      console.error(error);
+      toast.error("Error al crear el servicio"); console.error(error);
     } finally {
       setIsSubmitting(false);
     }
@@ -143,315 +112,303 @@ export function ServiceForm() {
     const parsed = parseInsuranceText(text);
     setFormData((prev) => ({
       ...prev,
-      cliente: parsed.cliente || prev.cliente,
-      celular: parsed.celular || prev.celular,
-      direccion: parsed.direccion || prev.direccion,
-      marca: parsed.marca || prev.marca,
-      modelo: parsed.modelo || prev.modelo,
-      patente: parsed.patente || prev.patente,
+      cliente: parsed.cliente || prev.cliente, celular: parsed.celular || prev.celular,
+      direccion: parsed.direccion || prev.direccion, marca: parsed.marca || prev.marca,
+      modelo: parsed.modelo || prev.modelo, patente: parsed.patente || prev.patente,
       tipoServicio: (parsed.tipoServicio as ServiceType) || prev.tipoServicio,
     }));
-    toast.success("Datos autocompletados con exito");
+    toast.success("✓ Datos autocompletados");
   };
+
+  // Estilo base de inputs — fondo levemente gris con borde visible
+  const inputClass = [
+    "h-9 rounded-lg text-sm transition-colors",
+    "bg-slate-50 border border-slate-300 text-slate-900 placeholder:text-slate-500",
+    "focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20",
+  ].join(" ");
+
+  const selectTriggerClass = [
+    "h-9 rounded-lg text-sm transition-colors",
+    "bg-slate-50 border border-slate-300 text-slate-900",
+    "focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20",
+    "data-[placeholder]:text-slate-400",
+  ].join(" ");
+
+  const selectedRiderColor = formData.riderAsignado ? riderColors[formData.riderAsignado] : null;
 
   return (
     <>
-      <Card className="p-4 md:p-6 border-0 avex-border-yellow shadow-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-          <h4 className="text-xl font-bold">Cargar Nuevo Servicio</h4>
-          <Button
-            variant="outline"
-            size="sm"
+      {/* Card principal — fondo blanco, sombra suave igual que el dashboard */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+
+        {/* Header — mismo dark que la tabla del dashboard */}
+        <div className="bg-[#1C2333] px-5 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-yellow-400 rounded-xl flex items-center justify-center shrink-0">
+              <Zap className="h-4 w-4 text-black" />
+            </div>
+            <div>
+              <p className="text-white font-black text-sm tracking-tight leading-none">NUEVO SERVICIO</p>
+              <p className="text-slate-400 text-[10px] font-medium mt-0.5">Completá los datos y asigná al rider</p>
+            </div>
+          </div>
+          <button
             onClick={() => setShowPasteDialog(true)}
-            className="font-bold"
+            className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border border-white/10"
           >
-            <Clipboard className="h-4 w-4 mr-1" />
-            Pegar texto del Seguro
-          </Button>
+            <Clipboard className="h-3 w-3" />
+            Pegar texto
+          </button>
         </div>
 
-        <hr className="opacity-25 mb-4" />
+        <div className="p-4 space-y-4">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Aseguradora */}
-          <div className="md:col-span-2 lg:col-span-4">
-            <Label className="text-sm text-muted-foreground font-bold mb-2 block">
-              Aseguradora u Origen
-            </Label>
-            <div className="flex flex-wrap gap-4 border p-3 rounded-lg bg-muted/50">
-              {INSURANCE_PROVIDERS.map((provider) => (
-                <label key={provider} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="aseguradora"
-                    checked={formData.aseguradora === provider}
-                    onChange={() => setFormData((p) => ({ ...p, aseguradora: provider }))}
-                    className="accent-primary"
-                  />
-                  <span className="text-sm font-bold">
-                    {provider === "Avex" ? "Particular (AVEX)" : provider}
-                  </span>
-                </label>
-              ))}
+          {/* Aseguradora — botones tipo pill */}
+          <div>
+            <FieldLabel icon={<Zap className="h-3 w-3" />} label="Origen / Aseguradora" />
+            <div className="flex flex-wrap gap-2">
+              {INSURANCE_PROVIDERS.map((provider) => {
+                const isSelected = formData.aseguradora === provider;
+                return (
+                  <button key={provider} type="button"
+                    onClick={() => setFormData((p) => ({ ...p, aseguradora: provider }))}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150 ${
+                      isSelected
+                        ? "bg-yellow-400 border-yellow-400 text-black shadow-sm shadow-yellow-200"
+                        : "bg-slate-50 border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-800"
+                    }`}
+                  >
+                    {provider === "Avex" ? "⚡ AVEX" : provider}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Cliente */}
-          <div>
-            <Label className="text-sm text-muted-foreground font-bold">Nombre del cliente</Label>
-            <Input
-              value={formData.cliente}
-              onChange={(e) => setFormData((p) => ({ ...p, cliente: e.target.value }))}
-              className="bg-muted/50 mt-1"
-            />
+          {/* Línea divisora sutil */}
+          <div className="border-t border-slate-200" />
+
+          {/* Cliente + Celular */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel icon={<User className="h-3 w-3" />} label="Cliente" />
+              <Input value={formData.cliente}
+                onChange={(e) => setFormData((p) => ({ ...p, cliente: e.target.value }))}
+                placeholder="Nombre del cliente" className={inputClass} />
+            </div>
+            <div>
+              <FieldLabel icon={<Phone className="h-3 w-3" />} label="Celular" />
+              <Input value={formData.celular}
+                onChange={(e) => setFormData((p) => ({ ...p, celular: e.target.value }))}
+                placeholder="11 1234-5678" className={inputClass} />
+            </div>
           </div>
 
-          {/* Celular */}
-          <div>
-            <Label className="text-sm text-muted-foreground font-bold">Celular</Label>
-            <Input
-              value={formData.celular}
-              onChange={(e) => setFormData((p) => ({ ...p, celular: e.target.value }))}
-              placeholder="Ej: 11 1234-5678"
-              className="bg-muted/50 mt-1"
-            />
+          {/* Marca + Modelo + Patente */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <FieldLabel icon={<Car className="h-3 w-3" />} label="Marca" />
+              <Select value={formData.marca}
+                onValueChange={(v) => setFormData((p) => ({ ...p, marca: v, modelo: "" }))}>
+                <SelectTrigger className={selectTriggerClass}>
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(CAR_BRANDS).map((brand) => (
+                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <FieldLabel icon={<ChevronRight className="h-3 w-3" />} label="Modelo" />
+              <Select value={formData.modelo}
+                onValueChange={(v) => setFormData((p) => ({ ...p, modelo: v }))}
+                disabled={!formData.marca}>
+                <SelectTrigger className={`${selectTriggerClass} disabled:opacity-50`}>
+                  <SelectValue placeholder={formData.marca ? "Seleccionar..." : "Elegí marca"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableModels.map((model) => (
+                    <SelectItem key={model} value={model}>{model}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <FieldLabel icon={<Hash className="h-3 w-3" />} label="Patente" />
+              <Input value={formData.patente}
+                onChange={(e) => setFormData((p) => ({ ...p, patente: e.target.value.toUpperCase() }))}
+                placeholder="AB123CD"
+                className={`${inputClass} uppercase font-mono tracking-widest`} />
+            </div>
           </div>
 
-          {/* Marca */}
-          <div>
-            <Label className="text-sm text-muted-foreground font-bold">Marca</Label>
-            <Select
-              value={formData.marca}
-              onValueChange={(v) => setFormData((p) => ({ ...p, marca: v, modelo: "" }))}
-            >
-              <SelectTrigger className="bg-muted/50 mt-1">
-                <SelectValue placeholder="Seleccionar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(CAR_BRANDS).map((brand) => (
-                  <SelectItem key={brand} value={brand}>
-                    {brand}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="border-t border-slate-200" />
+
+          {/* Tipo servicio + Monto (en columnas) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel icon={<Wrench className="h-3 w-3" />} label="Tipo de servicio" required />
+              <Select value={formData.tipoServicio}
+                onValueChange={(v) => {
+                  setFormData((p) => ({ ...p, tipoServicio: v as ServiceType }));
+                  setErrors((e) => ({ ...e, tipoServicio: false }));
+                }}>
+                <SelectTrigger className={`${selectTriggerClass} ${errors.tipoServicio ? "border-red-400 bg-red-50" : ""}`}>
+                  <SelectValue placeholder="Seleccionar tipo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      <span className="flex items-center gap-2">
+                        <span>{SERVICE_ICONS[type]}</span>
+                        {type}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.tipoServicio && <p className="text-[10px] text-red-500 mt-1 font-medium">Requerido</p>}
+            </div>
+
+            <div>
+              <FieldLabel icon={<DollarSign className="h-3 w-3" />} label="Monto a cobrar" required />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">$</span>
+                <Input type="number" value={formData.monto}
+                  onChange={(e) => {
+                    setFormData((p) => ({ ...p, monto: e.target.value }));
+                    setErrors((e) => ({ ...e, monto: false }));
+                  }}
+                  placeholder="0"
+                  className={`${inputClass} pl-7 font-bold text-slate-800 ${errors.monto ? "border-red-400 bg-red-50" : ""}`} />
+              </div>
+              {errors.monto && <p className="text-[10px] text-red-500 mt-1 font-medium">Requerido</p>}
+            </div>
           </div>
 
-          {/* Modelo */}
+          {/* Dirección */}
           <div>
-            <Label className="text-sm text-muted-foreground font-bold">Modelo</Label>
-            <Select
-              value={formData.modelo}
-              onValueChange={(v) => setFormData((p) => ({ ...p, modelo: v }))}
-              disabled={!formData.marca}
-            >
-              <SelectTrigger className="bg-muted/50 mt-1">
-                <SelectValue placeholder="Seleccionar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableModels.map((model) => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Patente */}
-          <div>
-            <Label className="text-sm text-muted-foreground font-bold">Patente</Label>
-            <Input
-              value={formData.patente}
-              onChange={(e) => setFormData((p) => ({ ...p, patente: e.target.value.toUpperCase() }))}
-              className="bg-muted/50 mt-1 uppercase"
-            />
-          </div>
-
-          {/* Direccion */}
-          <div className="md:col-span-2 lg:col-span-3">
-            <Label className="text-sm text-muted-foreground font-bold">
-              Direccion exacta <span className="text-destructive">*</span>
-            </Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                value={formData.direccion}
+            <FieldLabel icon={<MapPin className="h-3 w-3" />} label="Dirección exacta" required />
+            <div className="flex gap-2">
+              <Input value={formData.direccion}
                 onChange={(e) => {
                   setFormData((p) => ({ ...p, direccion: e.target.value }));
                   setErrors((e) => ({ ...e, direccion: false }));
                 }}
-                className={`flex-1 ${errors.direccion ? "border-destructive" : "border-foreground/20"}`}
-              />
-              <Button
-                type="button"
-                variant="outline"
+                placeholder="Calle, número, localidad..."
+                className={`${inputClass} flex-1 ${errors.direccion ? "border-red-400 bg-red-50" : ""}`} />
+              <button type="button"
                 onClick={() => formData.direccion && setShowMapDialog(true)}
                 disabled={!formData.direccion}
-                className="px-3"
+                className="h-9 w-9 bg-slate-50 border border-slate-300 rounded-lg flex items-center justify-center text-slate-500 hover:border-yellow-400 hover:text-yellow-500 hover:bg-yellow-50 disabled:opacity-30 transition-colors shrink-0"
               >
                 <MapPin className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
-            {errors.direccion && (
-              <span className="text-destructive text-sm font-bold">Requerido</span>
-            )}
+            {errors.direccion && <p className="text-[10px] text-red-500 mt-1 font-medium">Requerido</p>}
           </div>
 
-          {/* Tipo de Servicio */}
-          <div>
-            <Label className="text-sm text-muted-foreground font-bold">
-              Servicio <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={formData.tipoServicio}
-              onValueChange={(v) => {
-                setFormData((p) => ({ ...p, tipoServicio: v as ServiceType }));
-                setErrors((e) => ({ ...e, tipoServicio: false }));
-              }}
-            >
-              <SelectTrigger className={`mt-1 ${errors.tipoServicio ? "border-destructive" : "border-foreground/20"}`}>
-                <SelectValue placeholder="Elegir..." />
-              </SelectTrigger>
-              <SelectContent>
-                {SERVICE_TYPES.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.tipoServicio && (
-              <span className="text-destructive text-sm font-bold">Requerido</span>
-            )}
+          {/* Rider + Notas en columnas */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel icon={<UserCheck className="h-3 w-3" />} label="Rider asignado" required />
+              <Select value={formData.riderAsignado}
+                onValueChange={(v) => {
+                  setFormData((p) => ({ ...p, riderAsignado: v as RiderName }));
+                  setErrors((e) => ({ ...e, riderAsignado: false }));
+                }}>
+                <SelectTrigger
+                  className={`${selectTriggerClass} ${errors.riderAsignado ? "border-red-400 bg-red-50" : ""}`}
+                  style={selectedRiderColor ? {
+                    borderColor: selectedRiderColor,
+                    backgroundColor: selectedRiderColor + "12",
+                    color: selectedRiderColor,
+                    fontWeight: "700",
+                  } : {}}
+                >
+                  <SelectValue placeholder="Seleccionar rider..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {riders.map((rider) => {
+                    const color = riderColors[rider];
+                    return (
+                      <SelectItem key={rider} value={rider}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                          {rider}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              {errors.riderAsignado && <p className="text-[10px] text-red-500 mt-1 font-medium">Requerido</p>}
+            </div>
+
+            <div>
+              <FieldLabel icon={<FileText className="h-3 w-3" />} label="Notas para el rider" />
+              <Textarea value={formData.notas}
+                onChange={(e) => setFormData((p) => ({ ...p, notas: e.target.value }))}
+                placeholder="Instrucciones, referencias..."
+                rows={1}
+                className="bg-slate-50 border border-slate-300 text-slate-900 placeholder:text-slate-500 text-sm rounded-lg resize-none focus:bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 min-h-[36px]" />
+            </div>
           </div>
 
-          {/* Monto */}
-          <div>
-            <Label className="text-sm text-muted-foreground font-bold">
-              Monto a cobrar ($) <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              type="number"
-              value={formData.monto}
-              onChange={(e) => {
-                setFormData((p) => ({ ...p, monto: e.target.value }));
-                setErrors((e) => ({ ...e, monto: false }));
-              }}
-              placeholder="0.00"
-              className={`mt-1 ${errors.monto ? "border-destructive" : "border-foreground/20"}`}
-            />
-            {errors.monto && (
-              <span className="text-destructive text-sm font-bold">Requerido</span>
-            )}
-          </div>
+          <div className="border-t border-slate-200" />
 
-          {/* Rider */}
-          <div>
-            <Label className="text-sm font-bold">
-              Rider Asignado <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={formData.riderAsignado}
-              onValueChange={(v) => {
-                setFormData((p) => ({ ...p, riderAsignado: v as RiderName }));
-                setErrors((e) => ({ ...e, riderAsignado: false }));
-              }}
-            >
-              <SelectTrigger className={`mt-1 border-2 border-primary shadow-sm ${errors.riderAsignado ? "border-destructive" : ""}`}>
-                <SelectValue placeholder="Seleccionar..." />
-              </SelectTrigger>
-              <SelectContent>
-                {RIDERS.map((rider) => (
-                  <SelectItem key={rider} value={rider}>
-                    {rider}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.riderAsignado && (
-              <span className="text-destructive text-sm font-bold">Asigna un Rider</span>
-            )}
-          </div>
-
-          {/* Notas */}
-          <div className="md:col-span-2 lg:col-span-4">
-            <Label className="text-sm text-muted-foreground font-bold">
-              Notas para el Rider (Opcional)
-            </Label>
-            <Textarea
-              value={formData.notas}
-              onChange={(e) => setFormData((p) => ({ ...p, notas: e.target.value }))}
-              placeholder="Ej: Llamar al llegar al lugar, incluir link de ubicacion GPS..."
-              rows={2}
-              className="mt-1 border-foreground/20"
-            />
-          </div>
-
-          {/* Programar */}
-          <div className="md:col-span-2 lg:col-span-4">
-            <div className="flex items-center gap-3 border p-3 rounded-lg bg-muted/50 shadow-sm">
-              <Switch
-                checked={formData.esProgramado}
-                onCheckedChange={(checked) =>
-                  setFormData((p) => ({ ...p, esProgramado: checked }))
-                }
-              />
-              <Label className="font-bold cursor-pointer">
-                Agendar viaje para mas tarde?
-              </Label>
+          {/* Toggle programar */}
+          <div className="flex items-center gap-3 bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5">
+            <Switch checked={formData.esProgramado}
+              onCheckedChange={(checked) => setFormData((p) => ({ ...p, esProgramado: checked }))}
+              className="data-[state=checked]:bg-amber-500" />
+            <div>
+              <p className="text-xs font-bold text-slate-700">Agendar para más tarde</p>
+              <p className="text-[10px] text-slate-400">Programá para una fecha y hora específica</p>
             </div>
           </div>
 
           {formData.esProgramado && (
-            <>
+            <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
               <div>
-                <Label className="text-sm text-muted-foreground font-bold">Fecha a realizar</Label>
-                <Input
-                  type="date"
-                  value={formData.fechaProgramada}
+                <FieldLabel icon={<Calendar className="h-3 w-3" />} label="Fecha" />
+                <Input type="date" value={formData.fechaProgramada}
                   onChange={(e) => setFormData((p) => ({ ...p, fechaProgramada: e.target.value }))}
-                  className="bg-muted/50 mt-1"
-                />
+                  className={inputClass} />
               </div>
               <div>
-                <Label className="text-sm text-muted-foreground font-bold">Hora a realizar</Label>
-                <Input
-                  type="time"
-                  value={formData.horaProgramada}
+                <FieldLabel icon={<Clock className="h-3 w-3" />} label="Hora" />
+                <Input type="time" value={formData.horaProgramada}
                   onChange={(e) => setFormData((p) => ({ ...p, horaProgramada: e.target.value }))}
-                  className="bg-muted/50 mt-1"
-                />
+                  className={inputClass} />
               </div>
-            </>
+            </div>
           )}
+
+          {/* Botón submit */}
+          <button onClick={handleSubmit} disabled={isSubmitting}
+            className={`w-full py-3.5 rounded-xl font-black text-sm tracking-wide flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed ${
+              formData.esProgramado
+                ? "bg-[#1C2333] text-white hover:bg-slate-800 shadow-md"
+                : "bg-yellow-400 text-black hover:bg-yellow-300 shadow-md shadow-yellow-200"
+            }`}
+          >
+            {isSubmitting ? (
+              <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />PROCESANDO...</>
+            ) : formData.esProgramado ? (
+              <><Calendar className="h-4 w-4" />AGENDAR VIAJE PROGRAMADO</>
+            ) : (
+              <><Zap className="h-4 w-4" />ASIGNAR VIAJE INMEDIATO</>
+            )}
+          </button>
+
         </div>
+      </div>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-          className={`w-full mt-6 text-lg py-6 shadow-md font-bold ${
-            formData.esProgramado ? "bg-foreground hover:bg-foreground/90" : "btn-avex"
-          }`}
-        >
-          {isSubmitting
-            ? "Cargando..."
-            : formData.esProgramado
-              ? "AGENDAR VIAJE"
-              : "ASIGNAR VIAJE INMEDIATO"}
-        </Button>
-      </Card>
-
-      <PasteTextDialog
-        open={showPasteDialog}
-        onOpenChange={setShowPasteDialog}
-        onPaste={handlePasteData}
-      />
-
-      <MapPreviewDialog
-        open={showMapDialog}
-        onOpenChange={setShowMapDialog}
-        address={formData.direccion}
-      />
+      <PasteTextDialog open={showPasteDialog} onOpenChange={setShowPasteDialog} onPaste={handlePasteData} />
+      <MapPreviewDialog open={showMapDialog} onOpenChange={setShowMapDialog} address={formData.direccion} />
     </>
   );
 }

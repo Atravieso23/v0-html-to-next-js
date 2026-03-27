@@ -15,14 +15,19 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useAvexStore, selectTotalStock } from "@/lib/store";
-import { BATTERY_MODELS, RIDERS, CAR_BRANDS, type RiderName, type SalePaymentMethod } from "@/lib/types";
+import { CAR_BRANDS, type RiderName, type SalePaymentMethod, type Warranty } from "@/lib/types";
 import { getCurrentMoment, calculateSalePrice } from "@/lib/helpers";
 
 export function SalesForm() {
   const inventario = useAvexStore((state) => state.inventario);
   const config = useAvexStore((state) => state.config);
+  const batteryModels = useAvexStore((state) => state.batteryModels);
+  const riders = useAvexStore((state) => state.riders);
   const decrementBatteryStock = useAvexStore((state) => state.decrementBatteryStock);
   const addSale = useAvexStore((state) => state.addSale);
+  const addWarranty = useAvexStore((state) => state.addWarranty);
+
+  const [mesesGarantia, setMesesGarantia] = useState(6);
 
   const [formData, setFormData] = useState({
     cliente: "",
@@ -41,7 +46,7 @@ export function SalesForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get available batteries with stock
-  const availableBatteries = BATTERY_MODELS.filter((modelo) => {
+  const availableBatteries = batteryModels.filter((modelo) => {
     const bat = inventario[modelo];
     return bat?.lotes?.some((l) => l.cantidad > 0);
   });
@@ -110,6 +115,27 @@ export function SalesForm() {
         rider: formData.rider as RiderName,
         total: totalCobrar,
       });
+
+      // Generar garantía automáticamente
+      const vencDate = new Date(momento.fechaInput);
+      vencDate.setMonth(vencDate.getMonth() + mesesGarantia);
+      const fechaVenc = vencDate.toISOString().split("T")[0];
+      const [vy, vm, vd] = fechaVenc.split("-");
+      const warranty: Warranty = {
+        id: `w-${Date.now()}`,
+        fechaVenta: momento.fechaInput,
+        fechaVentaVisual: momento.fechaLegible,
+        fechaVencimiento: fechaVenc,
+        fechaVencimientoVisual: `${vd}/${vm}/${vy}`,
+        cliente: formData.cliente || "Cliente Mostrador",
+        celular: formData.celular || undefined,
+        patente: formData.patente ? formData.patente.toUpperCase() : undefined,
+        autoTexto: `${formData.marca} ${formData.modelo}`.trim(),
+        modeloBat: formData.bateria,
+        mesesGarantia,
+        estado: "Vigente",
+      };
+      addWarranty(warranty);
 
       toast.success(`Venta registrada! Se desconto 1 unidad de ${formData.bateria}`);
 
@@ -279,6 +305,25 @@ export function SalesForm() {
           </Select>
         </div>
 
+        {/* Garantía */}
+        <div>
+          <Label className="text-sm text-muted-foreground font-bold">Garantía (meses)</Label>
+          <Select
+            value={mesesGarantia.toString()}
+            onValueChange={(v) => setMesesGarantia(parseInt(v))}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 meses</SelectItem>
+              <SelectItem value="6">6 meses</SelectItem>
+              <SelectItem value="12">12 meses</SelectItem>
+              <SelectItem value="24">24 meses</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Total */}
         <div className="md:col-span-2">
           <div className="flex justify-between items-center avex-bg-dark text-white p-4 rounded-lg shadow-sm">
@@ -297,7 +342,7 @@ export function SalesForm() {
               <SelectValue placeholder="Rider que instala..." />
             </SelectTrigger>
             <SelectContent>
-              {RIDERS.map((rider) => (
+              {riders.map((rider) => (
                 <SelectItem key={rider} value={rider}>
                   {rider}
                 </SelectItem>

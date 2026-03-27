@@ -15,8 +15,10 @@ import type {
   BatteryPurchase,
   AppConfig,
   InventoryState,
+  Warranty,
+  AppUser,
 } from "./types";
-import { BATTERY_MODELS } from "./types";
+import { BATTERY_MODELS, RIDERS, RIDER_COLORS } from "./types";
 
 // --- Estado inicial ---
 const initialConfig: AppConfig = {
@@ -25,6 +27,8 @@ const initialConfig: AppConfig = {
     return acc;
   }, {} as Record<string, number>),
   recargos: { efectivo: 0, tarjeta1: 10, tarjeta3: 30 },
+  comisionRider: 10000,
+  adminPassword: "avex2024",
 };
 
 const initialState: AppState = {
@@ -41,12 +45,28 @@ interface AvexStore extends AppState {
   activeAdminTab: AdminTab;
   isDarkMode: boolean;
   isLoading: boolean;
+  batteryModels: string[];
+
+  // Auth
+  isAuthenticated: boolean;
+  currentUser: AppUser | null;
+  users: AppUser[];
+  login: (email: string, password: string) => boolean;
+  logout: () => void;
+  addUser: (user: AppUser) => void;
+  updateUser: (id: string, updates: Partial<AppUser>) => void;
+  deleteUser: (id: string) => void;
 
   // Actions - UI
   setView: (view: ViewType) => void;
   setAdminTab: (tab: AdminTab) => void;
   toggleDarkMode: () => void;
   setLoading: (loading: boolean) => void;
+
+  // Actions - Battery Models
+  addBatteryModel: (name: string) => void;
+  updateBatteryModel: (oldName: string, newName: string) => void;
+  deleteBatteryModel: (name: string) => void;
 
   // Actions - Servicios
   addService: (service: Service) => void;
@@ -76,6 +96,19 @@ interface AvexStore extends AppState {
   updatePrices: (prices: Record<string, number>) => void;
   updateSurcharges: (surcharges: { tarjeta1: number; tarjeta3: number }) => void;
 
+  // Garantías
+  garantias: Warranty[];
+  addWarranty: (warranty: Warranty) => void;
+  updateWarranty: (id: string, updates: Partial<Warranty>) => void;
+  deleteWarranty: (id: string) => void;
+
+  // Riders
+  riders: string[];
+  riderColors: Record<string, string>;
+  addRider: (name: string, color: string) => void;
+  updateRider: (oldName: string, newName: string, color: string) => void;
+  deleteRider: (name: string) => void;
+
   // Actions - Bulk
   setFullState: (state: Partial<AppState>) => void;
   reset: () => void;
@@ -92,6 +125,21 @@ export const useAvexStore = create<AvexStore>()(
       activeAdminTab: "servicios",
       isDarkMode: false,
       isLoading: true,
+      isAuthenticated: false,
+      currentUser: null,
+      users: [
+        {
+          id: "user-1",
+          email: "agustintravieso@gmail.com",
+          password: "admin123",
+          name: "Agustín",
+          role: "admin",
+        },
+      ] as AppUser[],
+      batteryModels: [...BATTERY_MODELS],
+      garantias: [],
+      riders: [...RIDERS],
+      riderColors: { ...RIDER_COLORS },
 
       // UI Actions
       setView: (view) => set({ currentView: view }),
@@ -104,6 +152,106 @@ export const useAvexStore = create<AvexStore>()(
         }
       },
       setLoading: (loading) => set({ isLoading: loading }),
+
+      // Auth Actions
+      login: (email, password) => {
+        const user = get().users.find(
+          (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+        );
+        if (user) {
+          set({ isAuthenticated: true, currentUser: user });
+          return true;
+        }
+        return false;
+      },
+
+      logout: () => set({ isAuthenticated: false, currentUser: null }),
+
+      // User CRUD
+      addUser: (user) => set((state) => ({ users: [...state.users, user] })),
+
+      updateUser: (id, updates) =>
+        set((state) => ({
+          users: state.users.map((u) => (u.id === id ? { ...u, ...updates } : u)),
+          // also update currentUser if it's the one being edited
+          currentUser:
+            state.currentUser?.id === id
+              ? { ...state.currentUser, ...updates }
+              : state.currentUser,
+        })),
+
+      deleteUser: (id) =>
+        set((state) => ({ users: state.users.filter((u) => u.id !== id) })),
+
+      // Garantías Actions
+      addWarranty: (warranty) =>
+        set((state) => ({ garantias: [...state.garantias, warranty] })),
+
+      updateWarranty: (id, updates) =>
+        set((state) => ({
+          garantias: state.garantias.map((g) => (g.id === id ? { ...g, ...updates } : g)),
+        })),
+
+      deleteWarranty: (id) =>
+        set((state) => ({ garantias: state.garantias.filter((g) => g.id !== id) })),
+
+      // Riders Actions
+      addRider: (name, color) =>
+        set((state) => ({
+          riders: [...state.riders, name],
+          riderColors: { ...state.riderColors, [name]: color },
+        })),
+
+      updateRider: (oldName, newName, color) =>
+        set((state) => {
+          const riders = state.riders.map((r) => (r === oldName ? newName : r));
+          const riderColors = { ...state.riderColors };
+          riderColors[newName] = color;
+          if (oldName !== newName) delete riderColors[oldName];
+          return { riders, riderColors };
+        }),
+
+      deleteRider: (name) =>
+        set((state) => {
+          const riderColors = { ...state.riderColors };
+          delete riderColors[name];
+          return {
+            riders: state.riders.filter((r) => r !== name),
+            riderColors,
+          };
+        }),
+
+      // Battery Models Actions
+      addBatteryModel: (name) =>
+        set((state) => ({
+          batteryModels: [...state.batteryModels, name],
+          config: {
+            ...state.config,
+            preciosBase: { ...state.config.preciosBase, [name]: 0 },
+          },
+        })),
+
+      updateBatteryModel: (oldName, newName) =>
+        set((state) => {
+          const models = state.batteryModels.map((m) => (m === oldName ? newName : m));
+          const preciosBase = { ...state.config.preciosBase };
+          preciosBase[newName] = preciosBase[oldName] ?? 0;
+          delete preciosBase[oldName];
+          return {
+            batteryModels: models,
+            config: { ...state.config, preciosBase },
+          };
+        }),
+
+      deleteBatteryModel: (name) =>
+        set((state) => {
+          const preciosBase = { ...state.config.preciosBase };
+          delete preciosBase[name];
+          return {
+            batteryModels: state.batteryModels.filter((m) => m !== name),
+            config: { ...state.config, preciosBase },
+          };
+        }),
 
       // Servicios Actions
       addService: (service) =>
@@ -306,6 +454,13 @@ reset: () => set(initialState),
         servicios: state.servicios,
         historiales: state.historiales,
         isDarkMode: state.isDarkMode,
+        isAuthenticated: state.isAuthenticated,
+        currentUser: state.currentUser,
+        users: state.users,
+        batteryModels: state.batteryModels,
+        garantias: state.garantias,
+        riders: state.riders,
+        riderColors: state.riderColors,
       }),
     }
   )
