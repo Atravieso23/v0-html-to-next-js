@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   BarChart,
   Bar,
@@ -19,8 +20,19 @@ import {
 import { useAvexStore } from "@/lib/store";
 import { calculateDashboardStats, formatCurrency, getCurrentMoment } from "@/lib/helpers";
 import type { RiderName } from "@/lib/types";
+import { INSURANCE_PROVIDERS } from "@/lib/types";
 import { Car, Battery, TrendingUp, DollarSign, AlertTriangle, Users, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
+
+// Colores fijos por aseguradora
+const ASEGURADORA_COLORS: Record<string, string> = {
+  Avex: "#facc15",
+  "La Caja": "#111827",
+  Rapihogar: "#3b82f6",
+  Nivel: "#10b981",
+};
+
+const MONTH_NAMES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
 export function DashboardTab() {
   const servicios = useAvexStore((state) => state.servicios);
@@ -31,6 +43,16 @@ export function DashboardTab() {
   const riderColors = useAvexStore((state) => state.riderColors);
 
   const [filterMonth, setFilterMonth] = useState(() => getCurrentMoment().fechaInput.substring(0, 7));
+  // Switch 1: false = General (Auxilios vs Baterías), true = Por Aseguradora
+  const [viewByAseguradora, setViewByAseguradora] = useState(false);
+  // Switch 2: false = Diaria, true = Mensual
+  const [viewMonthly, setViewMonthly] = useState(false);
+  // Leyenda interactiva: keys ocultas
+  const [hiddenSeries, setHiddenSeries] = useState<Record<string, boolean>>({});
+
+  const toggleSeries = useCallback((key: string) => {
+    setHiddenSeries((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   // Calculate stats
   const stats = useMemo(
@@ -38,39 +60,97 @@ export function DashboardTab() {
     [servicios, historiales.ventas, filterMonth, comisionRider, riders]
   );
 
-  // Calculate chart data
+  // ── CHART DATA ──────────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
     const [year, month] = filterMonth.split("-").map(Number);
-    const numDays = new Date(year, month, 0).getDate();
+    const yearPrefix = `${year}-`;
 
-    const data = Array.from({ length: numDays }, (_, i) => ({
-      day: i + 1,
-      servicios: 0,
-      baterias: 0,
-    }));
+    if (viewMonthly) {
+      // Vista mensual: 12 meses del año del mes filtrado
+      if (!viewByAseguradora) {
+        const data: { label: string; auxilios: number; baterias: number }[] =
+          MONTH_NAMES.map((name) => ({ label: name, auxilios: 0, baterias: 0 }));
 
-    // Count services by day
-    Object.values(servicios).forEach((s) => {
-      if (s.estado === "Finalizado" && s.fechaFinInput?.startsWith(filterMonth)) {
-        const day = parseInt(s.fechaFinInput.split("-")[2]);
-        if (day && day <= numDays) {
-          data[day - 1].servicios++;
-        }
+        const svcs = Object.values(servicios);
+        svcs.forEach((s) => {
+          if (s.estado === "Cancelado") return;
+          if (s.fechaInput?.startsWith(yearPrefix)) {
+            const m = parseInt(s.fechaInput.split("-")[1], 10) - 1;
+            if (m >= 0 && m < 12) data[m].auxilios += 1;
+          }
+        });
+        historiales.ventas.forEach((v) => {
+          if (v.fechaInput?.startsWith(yearPrefix)) {
+            const m = parseInt(v.fechaInput.split("-")[1], 10) - 1;
+            if (m >= 0 && m < 12) data[m].baterias += 1;
+          }
+        });
+        return data;
+      } else {
+        const data: { label: string; [k: string]: number | string }[] =
+          MONTH_NAMES.map((name) => {
+            const row: { label: string; [k: string]: number | string } = { label: name };
+            INSURANCE_PROVIDERS.forEach((p) => { row[p] = 0; });
+            return row;
+          });
+
+        Object.values(servicios).forEach((s) => {
+          if (s.estado === "Cancelado") return;
+          if (s.fechaInput?.startsWith(yearPrefix)) {
+            const m = parseInt(s.fechaInput.split("-")[1], 10) - 1;
+            if (m >= 0 && m < 12) {
+              const cur = data[m][s.aseguradora];
+              data[m][s.aseguradora] = (typeof cur === "number" ? cur : 0) + 1;
+            }
+          }
+        });
+        return data;
       }
-    });
+    } else {
+      // Vista diaria: días del mes filtrado
+      const numDays = new Date(year, month, 0).getDate();
 
-    // Count sales by day
-    historiales.ventas.forEach((v) => {
-      if (v.fechaInput?.startsWith(filterMonth)) {
-        const day = parseInt(v.fechaInput.split("-")[2]);
-        if (day && day <= numDays) {
-          data[day - 1].baterias++;
-        }
+      if (!viewByAseguradora) {
+        const data: { label: string; auxilios: number; baterias: number }[] =
+          Array.from({ length: numDays }, (_, i) => ({ label: String(i + 1), auxilios: 0, baterias: 0 }));
+
+        const svcs = Object.values(servicios);
+        svcs.forEach((s) => {
+          if (s.estado === "Cancelado") return;
+          if (s.fechaInput?.startsWith(filterMonth)) {
+            const day = parseInt(s.fechaInput.split("-")[2], 10);
+            if (day >= 1 && day <= numDays) data[day - 1].auxilios += 1;
+          }
+        });
+        historiales.ventas.forEach((v) => {
+          if (v.fechaInput?.startsWith(filterMonth)) {
+            const day = parseInt(v.fechaInput.split("-")[2], 10);
+            if (day >= 1 && day <= numDays) data[day - 1].baterias += 1;
+          }
+        });
+        return data;
+      } else {
+        const data: { label: string; [k: string]: number | string }[] =
+          Array.from({ length: numDays }, (_, i) => {
+            const row: { label: string; [k: string]: number | string } = { label: String(i + 1) };
+            INSURANCE_PROVIDERS.forEach((p) => { row[p] = 0; });
+            return row;
+          });
+
+        Object.values(servicios).forEach((s) => {
+          if (s.estado === "Cancelado") return;
+          if (s.fechaInput?.startsWith(filterMonth)) {
+            const day = parseInt(s.fechaInput.split("-")[2], 10);
+            if (day >= 1 && day <= numDays) {
+              const cur = data[day - 1][s.aseguradora];
+              data[day - 1][s.aseguradora] = (typeof cur === "number" ? cur : 0) + 1;
+            }
+          }
+        });
+        return data;
       }
-    });
-
-    return data;
-  }, [servicios, historiales.ventas, filterMonth]);
+    }
+  }, [servicios, historiales.ventas, filterMonth, viewByAseguradora, viewMonthly]);
 
   // Low stock alerts
   const lowStockAlerts = useMemo(() => {
@@ -164,10 +244,6 @@ export function DashboardTab() {
     }
   };
 
-  // Chart colors - computed in JS
-  const servicesColor = "#111827";
-  const batteriesColor = "#facc15";
-
   return (
     <div className="space-y-6">
       {/* Header with Filter */}
@@ -249,23 +325,103 @@ export function DashboardTab() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart */}
         <Card className="lg:col-span-2 p-4 border-0 shadow-sm">
-          <h5 className="font-bold mb-4">Evolucion del Mes</h5>
+          {/* Chart header + switches */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h5 className="font-bold">
+              {viewByAseguradora ? "Auxilios por Aseguradora" : "Auxilios vs Baterías"} —{" "}
+              {viewMonthly ? "Año" : "Mes"}
+            </h5>
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* Switch 1: Vista general / por aseguradora */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">General</span>
+                <Switch
+                  checked={viewByAseguradora}
+                  onCheckedChange={(v) => {
+                    setViewByAseguradora(v);
+                    setHiddenSeries({});
+                  }}
+                  className="data-[state=checked]:bg-amber-500"
+                />
+                <span className="text-xs text-muted-foreground font-medium">Aseguradora</span>
+              </div>
+              {/* Switch 2: Diario / Mensual */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">Diario</span>
+                <Switch
+                  checked={viewMonthly}
+                  onCheckedChange={(v) => {
+                    setViewMonthly(v);
+                    setHiddenSeries({});
+                  }}
+                  className="data-[state=checked]:bg-[#1C2333]"
+                />
+                <span className="text-xs text-muted-foreground font-medium">Mensual</span>
+              </div>
+            </div>
+          </div>
+
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
+              <BarChart data={chartData} barCategoryGap="25%" barSize={18}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 12 }} allowDecimals={false} width={28} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--card))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
+                    fontSize: 12,
                   }}
                 />
-                <Legend />
-                <Bar dataKey="servicios" name="Auxilios" fill={servicesColor} radius={[4, 4, 0, 0]} />
-                <Bar dataKey="baterias" name="Baterias" fill={batteriesColor} radius={[4, 4, 0, 0]} />
+                <Legend
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onClick={(e: any) => toggleSeries(e.dataKey as string)}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(value, entry: any) => (
+                    <span
+                      style={{
+                        color: hiddenSeries[entry.dataKey] ? "#9ca3af" : undefined,
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        fontSize: 12,
+                        textDecoration: hiddenSeries[entry.dataKey] ? "line-through" : "none",
+                      }}
+                    >
+                      {value}
+                    </span>
+                  )}
+                />
+                {viewByAseguradora ? (
+                  INSURANCE_PROVIDERS.map((provider) => (
+                    <Bar
+                      key={provider}
+                      dataKey={provider}
+                      name={provider}
+                      fill={ASEGURADORA_COLORS[provider] ?? "#6b7280"}
+                      radius={[4, 4, 0, 0]}
+                      hide={!!hiddenSeries[provider]}
+                    />
+                  ))
+                ) : ([
+                  <Bar
+                    key="auxilios"
+                    dataKey="auxilios"
+                    name="Auxilios"
+                    fill="#111827"
+                    radius={[4, 4, 0, 0]}
+                    hide={!!hiddenSeries["auxilios"]}
+                  />,
+                  <Bar
+                    key="baterias"
+                    dataKey="baterias"
+                    name="Baterias"
+                    fill="#facc15"
+                    radius={[4, 4, 0, 0]}
+                    hide={!!hiddenSeries["baterias"]}
+                  />,
+                ])}
               </BarChart>
             </ResponsiveContainer>
           </div>
