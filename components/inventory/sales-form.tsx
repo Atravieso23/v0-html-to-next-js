@@ -39,6 +39,7 @@ export function SalesForm() {
     precioBase: "",
     metodoPago: "efectivo" as SalePaymentMethod,
     rider: "" as RiderName | "",
+    direccion: "",
   });
 
   const [loteInfo, setLoteInfo] = useState<{ id: string | number; costo: number } | null>(null);
@@ -82,6 +83,10 @@ export function SalesForm() {
       toast.warning("Faltan datos obligatorios (Bateria, Precio o Rider)");
       return;
     }
+    if (!formData.direccion.trim()) {
+      toast.warning("La dirección de entrega es obligatoria");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -101,9 +106,11 @@ export function SalesForm() {
       };
 
       addSale({
+        id: `venta-${Date.now()}`,
         fechaVisual: momento.fechaLegible,
         fechaInput: momento.fechaInput,
         cliente: formData.cliente || "Cliente Mostrador",
+        celular: formData.celular || undefined,
         autoMarca: formData.marca.toLowerCase(),
         autoModelo: formData.modelo.toLowerCase(),
         autoTexto: `${formData.marca} ${formData.modelo}`.trim(),
@@ -114,6 +121,9 @@ export function SalesForm() {
         metodoPago: paymentLabels[formData.metodoPago],
         rider: formData.rider as RiderName,
         total: totalCobrar,
+        direccion: formData.direccion.trim(),
+        estado: "Pendiente",
+        tiempos: { creado: momento.completa },
       });
 
       // Generar garantía automáticamente
@@ -150,6 +160,7 @@ export function SalesForm() {
         precioBase: "",
         metodoPago: "efectivo",
         rider: "",
+        direccion: "",
       });
       setLoteInfo(null);
     } catch (error) {
@@ -188,41 +199,34 @@ export function SalesForm() {
 
         <div>
           <Label className="text-sm text-muted-foreground font-bold">Marca Auto</Label>
-          <Select
+          <Input
             value={formData.marca}
-            onValueChange={(v) => setFormData((p) => ({ ...p, marca: v, modelo: "" }))}
-          >
-            <SelectTrigger className="mt-1">
-              <SelectValue placeholder="Seleccionar..." />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.keys(CAR_BRANDS).map((brand) => (
-                <SelectItem key={brand} value={brand}>
-                  {brand}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(e) => setFormData((p) => ({ ...p, marca: e.target.value, modelo: "" }))}
+            placeholder="Seleccioná o escribí la marca..."
+            className="mt-1"
+            list="marcas-list-sales"
+          />
+          <datalist id="marcas-list-sales">
+            {Object.keys(CAR_BRANDS).map((brand) => (
+              <option key={brand} value={brand} />
+            ))}
+          </datalist>
         </div>
 
         <div>
           <Label className="text-sm text-muted-foreground font-bold">Modelo Auto</Label>
-          <Select
+          <Input
             value={formData.modelo}
-            onValueChange={(v) => setFormData((p) => ({ ...p, modelo: v }))}
-            disabled={!formData.marca}
-          >
-            <SelectTrigger className="mt-1">
-              <SelectValue placeholder="Seleccionar..." />
-            </SelectTrigger>
-            <SelectContent>
-              {availableModels.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onChange={(e) => setFormData((p) => ({ ...p, modelo: e.target.value }))}
+            placeholder="Seleccioná o escribí el modelo..."
+            className="mt-1"
+            list="modelos-list-sales"
+          />
+          <datalist id="modelos-list-sales">
+            {availableModels.map((model) => (
+              <option key={model} value={model} />
+            ))}
+          </datalist>
         </div>
 
         <div className="md:col-span-2">
@@ -330,6 +334,19 @@ export function SalesForm() {
             <span className="font-bold tracking-wide">TOTAL A COBRAR:</span>
             <span className="text-3xl font-bold text-green-400">${totalCobrar}</span>
           </div>
+        </div>
+
+        {/* Dirección de entrega */}
+        <div className="md:col-span-2">
+          <Label className="font-bold">
+            Dirección de entrega <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            value={formData.direccion}
+            onChange={(e) => setFormData((p) => ({ ...p, direccion: e.target.value }))}
+            placeholder="Ej: Av. Corrientes 1234, CABA"
+            className="mt-1"
+          />
         </div>
 
         {/* Rider */}

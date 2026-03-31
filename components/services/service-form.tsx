@@ -215,37 +215,36 @@ export function ServiceForm() {
             {/* Marca (full width) */}
             <div>
               <FieldLabel label="Vehículo (marca)" />
-              <Select
+              <Input
                 value={formData.marca}
-                onValueChange={(v) => setFormData((p) => ({ ...p, marca: v, modelo: "" }))}>
-                <SelectTrigger className={selectTriggerClass}>
-                  <SelectValue placeholder="Seleccioná la marca..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(CAR_BRANDS).map((brand) => (
-                    <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => setFormData((p) => ({ ...p, marca: e.target.value, modelo: "" }))}
+                placeholder="Seleccioná o escribí la marca..."
+                className={inputClass}
+                list="marcas-list"
+              />
+              <datalist id="marcas-list">
+                {Object.keys(CAR_BRANDS).map((brand) => (
+                  <option key={brand} value={brand} />
+                ))}
+              </datalist>
             </div>
 
             {/* Modelo + Patente */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <FieldLabel label="Modelo" />
-                <Select
+                <Input
                   value={formData.modelo}
-                  onValueChange={(v) => setFormData((p) => ({ ...p, modelo: v }))}
-                  disabled={!formData.marca}>
-                  <SelectTrigger className={`${selectTriggerClass} disabled:opacity-50`}>
-                    <SelectValue placeholder={formData.marca ? "Seleccionar..." : "Elegí marca primero"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableModels.map((model) => (
-                      <SelectItem key={model} value={model}>{model}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(e) => setFormData((p) => ({ ...p, modelo: e.target.value }))}
+                  placeholder="Seleccioná o escribí el modelo..."
+                  className={inputClass}
+                  list="modelos-list"
+                />
+                <datalist id="modelos-list">
+                  {availableModels.map((model) => (
+                    <option key={model} value={model} />
+                  ))}
+                </datalist>
               </div>
               <div>
                 <FieldLabel label="Patente" />

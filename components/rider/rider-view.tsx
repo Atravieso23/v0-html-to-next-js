@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAvexStore } from "@/lib/store";
 import { useShallow } from "zustand/react/shallow";
-import type { RiderName, Service } from "@/lib/types";
+import type { RiderName, Service, BatterySale } from "@/lib/types";
 import { getCurrentMoment, getGoogleMapsUrl, getWhatsAppUrl } from "@/lib/helpers";
 import {
   Navigation, MapPin, Phone, MessageCircle, CheckCircle,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { CloseServiceDialog } from "@/components/services/close-service-dialog";
+import { CloseBatterySaleDialog } from "@/components/services/close-battery-sale-dialog";
 
 // ─── Pantalla de selección de rider ───────────────────────────────────────────
 
@@ -247,6 +248,145 @@ function ActiveServiceCard({ service, onStatusChange, onClose }: {
   );
 }
 
+// ─── Card de venta de batería activa ─────────────────────────────────────────
+
+const SALE_STATUS_CONFIG: Record<string, { label: string; barBg: string; barText: string; pulse: boolean }> = {
+  "Pendiente":   { label: "NUEVA ENTREGA",  barBg: "bg-blue-500",   barText: "text-white", pulse: true },
+  "En camino":   { label: "EN CAMINO",      barBg: "bg-blue-700",   barText: "text-white", pulse: false },
+  "En el lugar": { label: "EN EL LUGAR",    barBg: "bg-green-500",  barText: "text-white", pulse: false },
+};
+
+function ActiveBatterySaleCard({ sale, onStatusChange, onClose }: {
+  sale: BatterySale;
+  onStatusChange: (status: BatterySale["estado"]) => void;
+  onClose: () => void;
+}) {
+  const status = SALE_STATUS_CONFIG[sale.estado] ?? SALE_STATUS_CONFIG["Pendiente"];
+  const isNew    = sale.estado === "Pendiente";
+  const isOnWay  = sale.estado === "En camino";
+  const isOnSite = sale.estado === "En el lugar";
+
+  return (
+    <div className="bg-white border-2 border-blue-400 rounded-2xl overflow-hidden mb-3 shadow-sm shadow-blue-100">
+
+      {/* Barra de estado */}
+      <div className={`px-4 py-2 flex items-center justify-between ${status.barBg}`}>
+        <div className="flex items-center gap-2">
+          {status.pulse && <span className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+          <Battery className="h-3.5 w-3.5 text-white" />
+          <span className={`font-black text-xs tracking-widest ${status.barText}`}>{status.label}</span>
+        </div>
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-black/20 text-white">
+          VENTA BATERÍA
+        </span>
+      </div>
+
+      <div className="p-4 space-y-3">
+
+        {/* Cliente + monto */}
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="font-black text-lg text-slate-900 leading-tight">{sale.cliente || "Sin nombre"}</h3>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <Battery className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+              <span className="text-sm text-slate-500">{sale.modeloBat}</span>
+              {sale.autoTexto && (
+                <span className="text-xs text-slate-400">· {sale.autoTexto}</span>
+              )}
+              {sale.patente && (
+                <span className="bg-slate-900 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded tracking-widest">
+                  {sale.patente}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">Total</p>
+            <p className="text-2xl font-black text-slate-900 leading-none">
+              ${sale.total.toLocaleString("es-AR")}
+            </p>
+            <p className="text-[10px] text-blue-500 font-bold">{sale.metodoPago}</p>
+          </div>
+        </div>
+
+        {/* Dirección */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-2">
+          <MapPin className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+          <span className="text-sm text-slate-700 font-medium leading-snug">{sale.direccion}</span>
+        </div>
+
+        {/* Botones */}
+        <div className="space-y-2 pt-1">
+          <button
+            onClick={() => window.open(getGoogleMapsUrl(sale.direccion), "_blank")}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 text-white font-bold text-sm rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all"
+          >
+            <Navigation className="h-4 w-4" />
+            ABRIR EN MAPS
+          </button>
+
+          {sale.celular && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => window.open(`tel:${sale.celular}`, "_blank")}
+                className="flex items-center justify-center gap-2 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:border-slate-400 active:scale-[0.98] transition-all"
+              >
+                <Phone className="h-4 w-4" />
+                Llamar
+              </button>
+              <button
+                onClick={() => window.open(
+                  getWhatsAppUrl(sale.celular!, `Hola ${sale.cliente}, soy de AVEX. Estoy en camino para entregar la batería.`),
+                  "_blank"
+                )}
+                className="flex items-center justify-center gap-2 py-2.5 bg-green-50 border-2 border-green-200 text-green-700 font-bold text-sm rounded-xl hover:border-green-400 active:scale-[0.98] transition-all"
+              >
+                <MessageCircle className="h-4 w-4" />
+                WhatsApp
+              </button>
+            </div>
+          )}
+
+          <div className="pt-1 border-t border-slate-100">
+            {isNew && (
+              <button
+                onClick={() => onStatusChange("En camino")}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-500 text-white font-black text-sm rounded-xl hover:bg-blue-400 active:scale-[0.98] transition-all shadow-md shadow-blue-200"
+              >
+                <Navigation className="h-4 w-4" />
+                SALIR EN CAMINO
+              </button>
+            )}
+            {isOnWay && (
+              <button
+                onClick={() => onStatusChange("En el lugar")}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-700 text-white font-black text-sm rounded-xl hover:bg-blue-600 active:scale-[0.98] transition-all shadow-md shadow-blue-300"
+              >
+                <MapPin className="h-4 w-4" />
+                LLEGUÉ AL LUGAR
+              </button>
+            )}
+            {isOnSite && (
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-500 text-white font-black text-sm rounded-xl hover:bg-green-400 active:scale-[0.98] transition-all shadow-md shadow-green-200"
+              >
+                <CheckCircle className="h-4 w-4" />
+                CONFIRMAR ENTREGA
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+          <Clock className="h-3 w-3" />
+          Asignada: {sale.tiempos?.creado || "—"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Card de servicio finalizado ──────────────────────────────────────────────
 
 function CompletedServiceCard({ service }: { service: Service }) {
@@ -304,9 +444,11 @@ function BatterySaleCard({ sale }: { sale: { modeloBat: string; autoTexto: strin
 function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => void }) {
   const services    = useAvexStore(useShallow((state) => Object.values(state.servicios).filter((s) => s.rider === rider)));
   const updateService = useAvexStore((state) => state.updateService);
+  const updateBatterySaleById = useAvexStore((state) => state.updateBatterySaleById);
   const historiales = useAvexStore((state) => state.historiales);
   const riderColors = useAvexStore((state) => state.riderColors);
   const [closingService, setClosingService] = useState<Service | null>(null);
+  const [closingSale, setClosingSale] = useState<BatterySale | null>(null);
   const color = riderColors[rider];
   const today = getCurrentMoment().fechaInput;
 
@@ -316,14 +458,21 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
   const completedToday = services.filter(
     (s) => (s.estado === "Finalizado" || s.estado === "Cancelado") && s.fechaFinInput === today
   );
-  const batteriesToday = historiales.ventas.filter(
-    (v) => v.rider === rider && v.fechaInput === today
+
+  const riderSalesToday = historiales.ventas.filter((v) => v.rider === rider && v.fechaInput === today);
+  const activeSales = riderSalesToday.filter(
+    (v) => v.estado !== "Finalizado" && v.estado !== "Cancelado"
+  );
+  const completedSalesToday = riderSalesToday.filter(
+    (v) => v.estado === "Finalizado" || v.estado === "Cancelado"
   );
 
   const totalServicios = completedToday
     .filter((s) => s.cobro !== "Cancelado" && s.cobro !== "No pagó")
     .reduce((sum, s) => sum + (s.monto || 0), 0);
-  const totalBaterias = batteriesToday.reduce((sum, s) => sum + (s.total || 0), 0);
+  const totalBaterias = completedSalesToday
+    .filter((v) => v.estado === "Finalizado")
+    .reduce((sum, v) => sum + (v.total || 0), 0);
 
   const handleStatusChange = (service: Service, newStatus: Service["estado"]) => {
     const momento = getCurrentMoment();
@@ -332,6 +481,15 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
     if (newStatus === "En el lugar") updates.tiempos = { ...service.tiempos, llegada: momento.completa };
     updateService(service.id, updates);
     toast.success(`Estado: ${newStatus}`);
+  };
+
+  const handleSaleStatusChange = (sale: BatterySale, newStatus: BatterySale["estado"]) => {
+    const momento = getCurrentMoment();
+    const updates: Partial<BatterySale> = { estado: newStatus };
+    if (newStatus === "En camino")   updates.tiempos = { ...sale.tiempos, camino: momento.completa };
+    if (newStatus === "En el lugar") updates.tiempos = { ...sale.tiempos, llegada: momento.completa };
+    updateBatterySaleById(sale.id, updates);
+    toast.success(`Entrega: ${newStatus}`);
   };
 
   return (
@@ -385,6 +543,27 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
           </div>
         </div>
 
+        {/* Entregas de batería activas */}
+        {activeSales.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Battery className="h-4 w-4 text-blue-500" />
+              <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Entregas de Batería</h3>
+              <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                {activeSales.length}
+              </span>
+            </div>
+            {activeSales.map((sale) => (
+              <ActiveBatterySaleCard
+                key={sale.id}
+                sale={sale}
+                onStatusChange={(status) => handleSaleStatusChange(sale, status)}
+                onClose={() => setClosingSale(sale)}
+              />
+            ))}
+          </div>
+        )}
+
         {/* Viajes activos */}
         <div>
           <div className="flex items-center gap-2 mb-3">
@@ -431,18 +610,18 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
           </div>
         )}
 
-        {/* Baterías hoy */}
-        {batteriesToday.length > 0 && (
+        {/* Baterías entregadas hoy */}
+        {completedSalesToday.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Battery className="h-4 w-4 text-blue-500" />
-              <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Baterías Instaladas</h3>
+              <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Baterías Entregadas Hoy</h3>
               <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                {batteriesToday.length}
+                {completedSalesToday.length}
               </span>
             </div>
-            {batteriesToday.map((sale, idx) => (
-              <BatterySaleCard key={idx} sale={sale} />
+            {completedSalesToday.map((sale) => (
+              <BatterySaleCard key={sale.id} sale={sale} />
             ))}
           </div>
         )}
@@ -453,6 +632,11 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
         open={!!closingService}
         onOpenChange={(open) => !open && setClosingService(null)}
       />
+      <CloseBatterySaleDialog
+        sale={closingSale}
+        open={!!closingSale}
+        onOpenChange={(open) => !open && setClosingSale(null)}
+      />
     </div>
   );
 }
@@ -462,8 +646,10 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
 function AdminRiderPanel({ rider }: { rider: RiderName }) {
   const services    = useAvexStore(useShallow((state) => Object.values(state.servicios).filter((s) => s.rider === rider)));
   const updateService = useAvexStore((state) => state.updateService);
+  const updateBatterySaleById = useAvexStore((state) => state.updateBatterySaleById);
   const historiales = useAvexStore((state) => state.historiales);
   const [closingService, setClosingService] = useState<Service | null>(null);
+  const [closingSale, setClosingSale] = useState<BatterySale | null>(null);
   const today = getCurrentMoment().fechaInput;
 
   const activeServices = services.filter(
@@ -472,14 +658,21 @@ function AdminRiderPanel({ rider }: { rider: RiderName }) {
   const completedToday = services.filter(
     (s) => (s.estado === "Finalizado" || s.estado === "Cancelado") && s.fechaFinInput === today
   );
-  const batteriesToday = historiales.ventas.filter(
-    (v) => v.rider === rider && v.fechaInput === today
+
+  const riderSalesToday = historiales.ventas.filter((v) => v.rider === rider && v.fechaInput === today);
+  const activeSales = riderSalesToday.filter(
+    (v) => v.estado !== "Finalizado" && v.estado !== "Cancelado"
+  );
+  const completedSalesToday = riderSalesToday.filter(
+    (v) => v.estado === "Finalizado" || v.estado === "Cancelado"
   );
 
   const totalServicios = completedToday
     .filter((s) => s.cobro !== "Cancelado" && s.cobro !== "No pagó")
     .reduce((sum, s) => sum + (s.monto || 0), 0);
-  const totalBaterias = batteriesToday.reduce((sum, s) => sum + (s.total || 0), 0);
+  const totalBaterias = completedSalesToday
+    .filter((v) => v.estado === "Finalizado")
+    .reduce((sum, v) => sum + (v.total || 0), 0);
 
   const handleStatusChange = (service: Service, newStatus: Service["estado"]) => {
     const momento = getCurrentMoment();
@@ -488,6 +681,15 @@ function AdminRiderPanel({ rider }: { rider: RiderName }) {
     if (newStatus === "En el lugar") updates.tiempos = { ...service.tiempos, llegada: momento.completa };
     updateService(service.id, updates);
     toast.success(`Estado: ${newStatus}`);
+  };
+
+  const handleSaleStatusChange = (sale: BatterySale, newStatus: BatterySale["estado"]) => {
+    const momento = getCurrentMoment();
+    const updates: Partial<BatterySale> = { estado: newStatus };
+    if (newStatus === "En camino")   updates.tiempos = { ...sale.tiempos, camino: momento.completa };
+    if (newStatus === "En el lugar") updates.tiempos = { ...sale.tiempos, llegada: momento.completa };
+    updateBatterySaleById(sale.id, updates);
+    toast.success(`Entrega: ${newStatus}`);
   };
 
   return (
@@ -507,6 +709,27 @@ function AdminRiderPanel({ rider }: { rider: RiderName }) {
           <p className="text-xl font-black text-slate-900">${totalBaterias.toLocaleString("es-AR")}</p>
         </div>
       </div>
+
+      {/* Entregas de batería activas */}
+      {activeSales.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Battery className="h-4 w-4 text-blue-500" />
+            <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Entregas de Batería</h3>
+            <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+              {activeSales.length}
+            </span>
+          </div>
+          {activeSales.map((sale) => (
+            <ActiveBatterySaleCard
+              key={sale.id}
+              sale={sale}
+              onStatusChange={(status) => handleSaleStatusChange(sale, status)}
+              onClose={() => setClosingSale(sale)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Activos */}
       <div>
@@ -543,19 +766,21 @@ function AdminRiderPanel({ rider }: { rider: RiderName }) {
         </div>
       )}
 
-      {batteriesToday.length > 0 && (
+      {completedSalesToday.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Battery className="h-4 w-4 text-blue-500" />
-            <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Baterías Instaladas</h3>
-            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{batteriesToday.length}</span>
+            <h3 className="font-black text-xs uppercase tracking-widest text-slate-500">Baterías Entregadas Hoy</h3>
+            <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{completedSalesToday.length}</span>
           </div>
-          {batteriesToday.map((sale, idx) => <BatterySaleCard key={idx} sale={sale} />)}
+          {completedSalesToday.map((sale) => <BatterySaleCard key={sale.id} sale={sale} />)}
         </div>
       )}
 
       <CloseServiceDialog service={closingService} open={!!closingService}
         onOpenChange={(open) => !open && setClosingService(null)} />
+      <CloseBatterySaleDialog sale={closingSale} open={!!closingSale}
+        onOpenChange={(open) => !open && setClosingSale(null)} />
     </div>
   );
 }

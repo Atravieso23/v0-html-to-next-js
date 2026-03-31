@@ -107,9 +107,12 @@ export type InventoryState = Record<string, BatteryInventory>;
 
 // --- Ventas ---
 export interface BatterySale {
+  id: string;
   fechaVisual: string;
   fechaInput: string;
+  fechaFinInput?: string;
   cliente: string;
+  celular?: string;
   autoMarca: string;
   autoModelo: string;
   autoTexto: string;
@@ -120,6 +123,11 @@ export interface BatterySale {
   metodoPago: string;
   rider: RiderName;
   total: number;
+  // Campos de entrega
+  direccion: string;
+  estado: ServiceStatus;
+  tiempos: ServiceTimestamps;
+  obs?: string;
 }
 
 // --- Compras ---

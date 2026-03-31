@@ -86,6 +86,7 @@ interface AvexStore extends AppState {
   // Actions - Historiales
   addSale: (sale: BatterySale) => void;
   updateSale: (index: number, updates: Partial<BatterySale>) => void;
+  updateBatterySaleById: (id: string, updates: Partial<BatterySale>) => void;
   deleteSale: (index: number) => void;
   addPurchase: (purchase: BatteryPurchase) => void;
   updatePurchase: (index: number, updates: Partial<BatteryPurchase>) => void;
@@ -340,6 +341,16 @@ export const useAvexStore = create<AvexStore>()(
           ventas[index] = { ...ventas[index], ...updates };
           return { historiales: { ...state.historiales, ventas } };
         }),
+
+      updateBatterySaleById: (id, updates) =>
+        set((state) => ({
+          historiales: {
+            ...state.historiales,
+            ventas: state.historiales.ventas.map((v) =>
+              v.id === id ? { ...v, ...updates } : v
+            ),
+          },
+        })),
 
       deleteSale: (index) =>
         set((state) => {
