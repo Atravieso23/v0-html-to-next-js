@@ -43,11 +43,11 @@ function RiderLoginScreen({ onSelect }: { onSelect: (rider: RiderName) => void }
 
           <div className="p-4 space-y-2.5">
             {riders.map((rider) => {
-              const color = riderColors[rider];
+              const color = rider.color || riderColors[rider.nombre] || "#888";
               return (
                 <button
-                  key={rider}
-                  onClick={() => onSelect(rider)}
+                  key={rider.nombre}
+                  onClick={() => onSelect(rider.nombre)}
                   className="w-full flex items-center gap-4 px-4 py-4 rounded-xl border-2 border-slate-200 bg-slate-50 hover:border-opacity-100 active:scale-[0.98] transition-all duration-150 group"
                   style={{ ["--hover-color" as string]: color }}
                   onMouseEnter={(e) => {
@@ -63,10 +63,10 @@ function RiderLoginScreen({ onSelect }: { onSelect: (rider: RiderName) => void }
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white font-black text-lg"
                     style={{ backgroundColor: color }}
                   >
-                    {rider[0]}
+                    {rider.nombre[0]}
                   </div>
                   <div className="text-left">
-                    <p className="font-black text-slate-900 text-base leading-none">{rider}</p>
+                    <p className="font-black text-slate-900 text-base leading-none">{rider.nombre}</p>
                     <p className="text-xs text-slate-400 mt-0.5">Rider AVEX</p>
                   </div>
                   <div className="ml-auto text-slate-300 group-hover:translate-x-1 transition-transform">
@@ -801,7 +801,7 @@ export function RiderView({
   const riders = useAvexStore((state) => state.riders);
   const riderColors = useAvexStore((state) => state.riderColors);
   const [selectedRider, setSelectedRider] = useState<RiderName | null>(preselectedRider ?? null);
-  const [activeTab, setActiveTab] = useState<RiderName>(() => riders[0] ?? "");
+  const [activeTab, setActiveTab] = useState<RiderName>(() => riders[0]?.nombre ?? "");
 
   // ── Modo rider: login + vista propia ──
   if (mode === "rider") {
@@ -822,10 +822,10 @@ export function RiderView({
       {/* Selector de riders */}
       <div className="flex gap-2 mb-5">
         {riders.map((rider) => {
-          const isActive = activeTab === rider;
-          const color = riderColors[rider];
+          const isActive = activeTab === rider.nombre;
+          const color = rider.color || riderColors[rider.nombre] || "#888";
           return (
-            <button key={rider} onClick={() => setActiveTab(rider)}
+            <button key={rider.nombre} onClick={() => setActiveTab(rider.nombre)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
                 isActive ? "scale-[1.02] shadow-md" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
               }`}
@@ -837,7 +837,7 @@ export function RiderView({
               } : {}}
             >
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? color : "#cbd5e1" }} />
-              {rider}
+              {rider.nombre}
             </button>
           );
         })}

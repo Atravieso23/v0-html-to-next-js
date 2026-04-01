@@ -14,6 +14,7 @@ import { ServicesHistoryTab, BatteriesHistoryTab } from "@/components/admin/hist
 import { CatalogTab } from "@/components/admin/catalog-tab";
 import { GarantiasTab } from "@/components/admin/garantias-tab";
 import { UsuariosTab } from "@/components/admin/usuarios-tab";
+import { ConfigTab } from "@/components/admin/config-tab";
 import { RiderView } from "@/components/rider/rider-view";
 import { useAvexStore } from "@/lib/store";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -33,6 +34,7 @@ const TAB_TITLES: Record<AdminTab, { title: string; subtitle: string }> = {
   catalogo:            { title: "Catálogo y Precios",   subtitle: "Gestioná el catálogo de productos y precios" },
   garantias:           { title: "Generar Garantía",     subtitle: "Creá garantías para los servicios realizados" },
   usuarios:            { title: "Gestión de Usuarios",  subtitle: "Administrá accesos y roles del sistema" },
+  configuracion:       { title: "Configuración",        subtitle: "Gestioná riders y aseguradoras del sistema" },
 };
 
 function renderTab(tab: AdminTab) {
@@ -47,6 +49,7 @@ function renderTab(tab: AdminTab) {
     case "catalogo":           return <CatalogTab />;
     case "garantias":          return <GarantiasTab />;
     case "usuarios":           return <UsuariosTab />;
+    case "configuracion":      return <ConfigTab />;
     default:                   return <ServicesTab />;
   }
 }

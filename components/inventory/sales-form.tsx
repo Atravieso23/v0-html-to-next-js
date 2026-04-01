@@ -360,8 +360,8 @@ export function SalesForm() {
             </SelectTrigger>
             <SelectContent>
               {riders.map((rider) => (
-                <SelectItem key={rider} value={rider}>
-                  {rider}
+                <SelectItem key={rider.nombre} value={rider.nombre}>
+                  {rider.nombre}
                 </SelectItem>
               ))}
             </SelectContent>

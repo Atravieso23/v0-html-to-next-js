@@ -69,23 +69,23 @@ export function CatalogTab() {
   const handleAddRider = () => {
     const name = newRiderName.trim();
     if (!name) return;
-    if (riders.includes(name)) { toast.error("Ya existe un rider con ese nombre"); return; }
-    addRider(name, newRiderColor);
+    if (riders.some((r) => r.nombre === name)) { toast.error("Ya existe un rider con ese nombre"); return; }
+    addRider({ nombre: name, telefono: "", color: newRiderColor });
     setNewRiderName(""); setNewRiderColor("#facc15"); setShowAddRider(false);
     toast.success(`Rider "${name}" agregado`);
   };
 
-  const handleStartEditRider = (name: string) => {
-    setEditingRider(name);
-    setEditingRiderName(name);
-    setEditingRiderColor(riderColors[name] || "#facc15");
+  const handleStartEditRider = (nombre: string, color: string) => {
+    setEditingRider(nombre);
+    setEditingRiderName(nombre);
+    setEditingRiderColor(color || "#facc15");
   };
 
   const handleConfirmEditRider = () => {
     const newName = editingRiderName.trim();
     if (!newName || !editingRider) return;
-    if (newName !== editingRider && riders.includes(newName)) { toast.error("Ya existe ese nombre"); return; }
-    updateRider(editingRider, newName, editingRiderColor);
+    if (newName !== editingRider && riders.some((r) => r.nombre === newName)) { toast.error("Ya existe ese nombre"); return; }
+    updateRider(editingRider, { nombre: newName, color: editingRiderColor });
     setEditingRider(null);
     toast.success("Rider actualizado");
   };
@@ -392,8 +392,8 @@ export function CatalogTab() {
 
           <div className="space-y-2">
             {riders.map((rider) => (
-              <div key={rider} className="flex items-center gap-2 border-b pb-2">
-                {editingRider === rider ? (
+              <div key={rider.nombre} className="flex items-center gap-2 border-b pb-2">
+                {editingRider === rider.nombre ? (
                   <>
                     <input
                       type="color"
@@ -420,12 +420,12 @@ export function CatalogTab() {
                   </>
                 ) : (
                   <>
-                    <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: riderColors[rider] || "#888" }} />
-                    <span className="text-sm font-bold flex-1">{rider}</span>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-blue-600" onClick={() => handleStartEditRider(rider)}>
+                    <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: rider.color }} />
+                    <span className="text-sm font-bold flex-1">{rider.nombre}</span>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-blue-600" onClick={() => handleStartEditRider(rider.nombre, rider.color)}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-red-600" onClick={() => { deleteRider(rider); toast.success(`Rider "${rider}" eliminado`); }}>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-red-600" onClick={() => { deleteRider(rider.nombre); toast.success(`Rider "${rider.nombre}" eliminado`); }}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </>

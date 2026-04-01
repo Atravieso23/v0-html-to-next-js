@@ -6,6 +6,13 @@
 // --- Riders ---
 export type RiderName = string;
 
+export interface Rider {
+  nombre: string;
+  telefono: string;
+  color: string;
+}
+
+// Valores por defecto (pueden sobreescribirse desde el store)
 export const RIDERS: RiderName[] = ["Andrés", "Sergio", "Abraham"];
 
 export const RIDER_COLORS: Record<string, string> = {
@@ -15,9 +22,13 @@ export const RIDER_COLORS: Record<string, string> = {
 };
 
 // --- Aseguradoras ---
-export type InsuranceProvider = "Avex" | "La Caja" | "Rapihogar" | "Nivel";
+export interface Aseguradora {
+  nombre: string;
+}
 
-export const INSURANCE_PROVIDERS: InsuranceProvider[] = [
+export type InsuranceProvider = string;
+
+export const INSURANCE_PROVIDERS: string[] = [
   "Avex",
   "La Caja",
   "Rapihogar",
@@ -221,7 +232,8 @@ export type AdminTab =
   | "historial-baterias"
   | "catalogo"
   | "garantias"
-  | "usuarios";
+  | "usuarios"
+  | "configuracion";
 
 // --- Momento Actual ---
 export interface CurrentMoment {

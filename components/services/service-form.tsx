@@ -16,7 +16,7 @@ import { MapPin, Zap, Clipboard, Calendar, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useAvexStore } from "@/lib/store";
 import {
-  INSURANCE_PROVIDERS, SERVICE_TYPES, CAR_BRANDS,
+  SERVICE_TYPES, CAR_BRANDS,
   type InsuranceProvider, type ServiceType, type RiderName,
 } from "@/lib/types";
 import { getCurrentMoment, generateId, geocodeAddress, parseInsuranceText } from "@/lib/helpers";
@@ -45,10 +45,10 @@ function FieldLabel({ label, required }: { label: string; required?: boolean }) 
 }
 
 export function ServiceForm() {
-  const addService = useAvexStore((state) => state.addService);
-  const servicios = useAvexStore((state) => state.servicios);
-  const riders = useAvexStore((state) => state.riders);
-  const riderColors = useAvexStore((state) => state.riderColors);
+  const addService         = useAvexStore((state) => state.addService);
+  const servicios          = useAvexStore((state) => state.servicios);
+  const riders             = useAvexStore((state) => state.riders);
+  const insuranceProviders = useAvexStore((state) => state.insuranceProviders);
 
   const [formData, setFormData] = useState({
     aseguradora: "Avex" as InsuranceProvider,
@@ -134,7 +134,9 @@ export function ServiceForm() {
     "data-[placeholder]:text-slate-400",
   ].join(" ");
 
-  const selectedRiderColor = formData.riderAsignado ? riderColors[formData.riderAsignado] : null;
+  const selectedRiderColor = formData.riderAsignado
+    ? (riders.find((r) => r.nombre === formData.riderAsignado)?.color ?? null)
+    : null;
 
   return (
     <>
@@ -170,13 +172,13 @@ export function ServiceForm() {
             <div>
               <FieldLabel label="Aseguradora / Origen" />
               <div className="flex rounded-lg border border-slate-200 overflow-hidden divide-x divide-slate-200 bg-white">
-                {INSURANCE_PROVIDERS.map((provider) => {
+                {insuranceProviders.map((provider) => {
                   const isSelected = formData.aseguradora === provider;
                   return (
                     <button
                       key={provider}
                       type="button"
-                      onClick={() => setFormData((p) => ({ ...p, aseguradora: provider }))}
+                      onClick={() => setFormData((p) => ({ ...p, aseguradora: provider as InsuranceProvider }))}
                       className={`flex-1 py-2 text-xs font-semibold transition-colors duration-150 ${
                         isSelected
                           ? "bg-yellow-400 text-black"
@@ -360,17 +362,14 @@ export function ServiceForm() {
                     <SelectValue placeholder="Seleccionar rider..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {riders.map((rider) => {
-                      const color = riderColors[rider];
-                      return (
-                        <SelectItem key={rider} value={rider}>
-                          <span className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                            {rider}
-                          </span>
-                        </SelectItem>
-                      );
-                    })}
+                    {riders.map((rider) => (
+                      <SelectItem key={rider.nombre} value={rider.nombre}>
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: rider.color }} />
+                          {rider.nombre}
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {errors.riderAsignado && <p className="text-[10px] text-red-500 mt-1">Requerido</p>}

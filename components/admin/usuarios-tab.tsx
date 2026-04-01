@@ -204,7 +204,7 @@ export function UsuariosTab() {
                   <SelectContent>
                     <SelectItem value="__none__">Sin rider vinculado</SelectItem>
                     {riders.map((r) => (
-                      <SelectItem key={r} value={r}>{r}</SelectItem>
+                      <SelectItem key={r.nombre} value={r.nombre}>{r.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -273,7 +273,7 @@ export function UsuariosTab() {
                         <SelectContent>
                           <SelectItem value="__none__">Sin rider vinculado</SelectItem>
                           {riders.map((r) => (
-                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                            <SelectItem key={r.nombre} value={r.nombre}>{r.nombre}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

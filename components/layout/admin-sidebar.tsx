@@ -12,6 +12,7 @@ import {
   FolderOpen,
   History,
   Settings,
+  Settings2,
   FileText,
   Users,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const adminNav: NavItem[] = [
   { id: "catalogo", label: "Catalogo y Precios", icon: <Settings className="h-4 w-4" /> },
   { id: "garantias", label: "Generar Garantia", icon: <FileText className="h-4 w-4" /> },
   { id: "usuarios", label: "Usuarios", icon: <Users className="h-4 w-4" /> },
+  { id: "configuracion", label: "Configuración", icon: <Settings2 className="h-4 w-4" /> },
 ];
 
 export function AdminSidebar() {

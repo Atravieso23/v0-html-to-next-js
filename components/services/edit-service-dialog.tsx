@@ -228,8 +228,8 @@ export function EditServiceDialog({ service, open, onOpenChange }: EditServiceDi
                 </SelectTrigger>
                 <SelectContent>
                   {riders.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {r}
+                    <SelectItem key={r.nombre} value={r.nombre}>
+                      {r.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>

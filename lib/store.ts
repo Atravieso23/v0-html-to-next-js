@@ -11,6 +11,7 @@ import type {
   ViewType,
   AdminTab,
   RiderName,
+  Rider,
   BatterySale,
   BatteryPurchase,
   AppConfig,
@@ -18,7 +19,7 @@ import type {
   Warranty,
   AppUser,
 } from "./types";
-import { BATTERY_MODELS, RIDERS, RIDER_COLORS } from "./types";
+import { BATTERY_MODELS, RIDERS, RIDER_COLORS, INSURANCE_PROVIDERS } from "./types";
 
 // --- Estado inicial ---
 const initialConfig: AppConfig = {
@@ -104,11 +105,16 @@ interface AvexStore extends AppState {
   deleteWarranty: (id: string) => void;
 
   // Riders
-  riders: string[];
+  riders: Rider[];
   riderColors: Record<string, string>;
-  addRider: (name: string, color: string) => void;
-  updateRider: (oldName: string, newName: string, color: string) => void;
-  deleteRider: (name: string) => void;
+  addRider: (rider: Rider) => void;
+  updateRider: (nombre: string, updates: Partial<Rider>) => void;
+  deleteRider: (nombre: string) => void;
+
+  // Aseguradoras
+  insuranceProviders: string[];
+  addInsuranceProvider: (nombre: string) => void;
+  deleteInsuranceProvider: (nombre: string) => void;
 
   // Actions - Bulk
   setFullState: (state: Partial<AppState>) => void;
@@ -153,8 +159,13 @@ export const useAvexStore = create<AvexStore>()(
       ] as AppUser[],
       batteryModels: [...BATTERY_MODELS],
       garantias: [],
-      riders: [...RIDERS],
+      riders: RIDERS.map((nombre) => ({
+        nombre,
+        telefono: "",
+        color: RIDER_COLORS[nombre] || "#6b7280",
+      })),
       riderColors: { ...RIDER_COLORS },
+      insuranceProviders: [...INSURANCE_PROVIDERS],
 
       // UI Actions
       setView: (view) => set({ currentView: view }),
@@ -211,30 +222,47 @@ export const useAvexStore = create<AvexStore>()(
         set((state) => ({ garantias: state.garantias.filter((g) => g.id !== id) })),
 
       // Riders Actions
-      addRider: (name, color) =>
+      addRider: (rider) =>
         set((state) => ({
-          riders: [...state.riders, name],
-          riderColors: { ...state.riderColors, [name]: color },
+          riders: [...state.riders, rider],
+          riderColors: { ...state.riderColors, [rider.nombre]: rider.color },
         })),
 
-      updateRider: (oldName, newName, color) =>
+      updateRider: (nombre, updates) =>
         set((state) => {
-          const riders = state.riders.map((r) => (r === oldName ? newName : r));
-          const riderColors = { ...state.riderColors };
-          riderColors[newName] = color;
-          if (oldName !== newName) delete riderColors[oldName];
-          return { riders, riderColors };
+          const newRiders = state.riders.map((r) =>
+            r.nombre === nombre ? { ...r, ...updates } : r
+          );
+          const newColors = { ...state.riderColors };
+          const newNombre = updates.nombre ?? nombre;
+          const updated = newRiders.find((r) => r.nombre === newNombre);
+          if (updated) {
+            newColors[newNombre] = updated.color;
+            if (updates.nombre && updates.nombre !== nombre) delete newColors[nombre];
+          }
+          return { riders: newRiders, riderColors: newColors };
         }),
 
-      deleteRider: (name) =>
+      deleteRider: (nombre) =>
         set((state) => {
-          const riderColors = { ...state.riderColors };
-          delete riderColors[name];
+          const newColors = { ...state.riderColors };
+          delete newColors[nombre];
           return {
-            riders: state.riders.filter((r) => r !== name),
-            riderColors,
+            riders: state.riders.filter((r) => r.nombre !== nombre),
+            riderColors: newColors,
           };
         }),
+
+      // Aseguradoras Actions
+      addInsuranceProvider: (nombre) =>
+        set((state) => ({
+          insuranceProviders: [...state.insuranceProviders, nombre],
+        })),
+
+      deleteInsuranceProvider: (nombre) =>
+        set((state) => ({
+          insuranceProviders: state.insuranceProviders.filter((p) => p !== nombre),
+        })),
 
       // Battery Models Actions
       addBatteryModel: (name) =>
@@ -420,16 +448,16 @@ reset: () => set(initialState),
           id: "svc-1",
           orden: 1,
           cliente: "Juan Perez",
-          telefono: "1155667788",
+          celular: "1155667788",
           direccion: "Av. Corrientes 1234, CABA",
           marca: "Toyota",
           modelo: "Corolla",
           patente: "ABC123",
           aseguradora: "La Caja",
-          rider: "Nicolas",
-          tipoServicio: "Bateria",
+          rider: "Andrés",
+          tipo: "Arranque",
           estado: "Pendiente",
-          cobro: "Pendiente",
+          cobro: "No pagó",
           monto: 15000,
           fechaVisual: "18/03/2026",
           fechaInput: "2026-03-18",
@@ -440,16 +468,16 @@ reset: () => set(initialState),
           id: "svc-2",
           orden: 2,
           cliente: "Maria Garcia",
-          telefono: "1144332211",
+          celular: "1144332211",
           direccion: "Av. Santa Fe 2500, CABA",
           marca: "Ford",
           modelo: "Focus",
           patente: "DEF456",
           aseguradora: "Avex",
-          rider: "Santiago",
-          tipoServicio: "Auxilio",
+          rider: "Sergio",
+          tipo: "Inflado",
           estado: "En camino",
-          cobro: "Pendiente",
+          cobro: "No pagó",
           monto: 8000,
           fechaVisual: "18/03/2026",
           fechaInput: "2026-03-18",
@@ -472,23 +500,46 @@ reset: () => set(initialState),
   },
   }),
   {
-  name: "avex-storage",
-      partialize: (state) => ({
-        config: state.config,
-        inventario: state.inventario,
-        servicios: state.servicios,
-        historiales: state.historiales,
-        isDarkMode: state.isDarkMode,
-        isAuthenticated: state.isAuthenticated,
-        currentUser: state.currentUser,
-        users: state.users,
-        batteryModels: state.batteryModels,
-        garantias: state.garantias,
-        riders: state.riders,
-        riderColors: state.riderColors,
-      }),
-    }
-  )
+    name: "avex-storage",
+    version: 1,
+    migrate: (persistedState: any, version: number) => {
+      if (version < 1) {
+        // Migrar riders de string[] a Rider[]
+        if (
+          Array.isArray(persistedState.riders) &&
+          (persistedState.riders.length === 0 || typeof persistedState.riders[0] === "string")
+        ) {
+          const colors = persistedState.riderColors || {};
+          persistedState.riders = (persistedState.riders as string[]).map((nombre: string) => ({
+            nombre,
+            telefono: "",
+            color: colors[nombre] || "#6b7280",
+          }));
+        }
+        // Agregar insuranceProviders si no existe
+        if (!persistedState.insuranceProviders) {
+          persistedState.insuranceProviders = [...INSURANCE_PROVIDERS];
+        }
+      }
+      return persistedState;
+    },
+    partialize: (state) => ({
+      config: state.config,
+      inventario: state.inventario,
+      servicios: state.servicios,
+      historiales: state.historiales,
+      isDarkMode: state.isDarkMode,
+      isAuthenticated: state.isAuthenticated,
+      currentUser: state.currentUser,
+      users: state.users,
+      batteryModels: state.batteryModels,
+      garantias: state.garantias,
+      riders: state.riders,
+      riderColors: state.riderColors,
+      insuranceProviders: state.insuranceProviders,
+    }),
+  }
+)
 );
 
 // --- Selectores ---

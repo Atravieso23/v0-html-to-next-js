@@ -55,9 +55,11 @@ export function DashboardTab() {
   }, []);
 
   // Calculate stats
+  const riderNames = useMemo(() => riders.map((r) => r.nombre), [riders]);
+
   const stats = useMemo(
-    () => calculateDashboardStats(servicios, historiales.ventas, filterMonth, comisionRider, riders),
-    [servicios, historiales.ventas, filterMonth, comisionRider, riders]
+    () => calculateDashboardStats(servicios, historiales.ventas, filterMonth, comisionRider, riderNames),
+    [servicios, historiales.ventas, filterMonth, comisionRider, riderNames]
   );
 
   // ── CHART DATA ──────────────────────────────────────────────────────────────
@@ -166,13 +168,13 @@ export function DashboardTab() {
 
   // Rider ranking
   const riderRanking = useMemo(() => {
-    return riders.map((rider) => ({
-      rider,
-      servicios: stats.riders[rider]?.servicios || 0,
-      baterias: stats.riders[rider]?.baterias || 0,
-      total: (stats.riders[rider]?.servicios || 0) + (stats.riders[rider]?.baterias || 0),
+    return riderNames.map((nombre) => ({
+      rider: nombre,
+      servicios: stats.riders[nombre]?.servicios || 0,
+      baterias: stats.riders[nombre]?.baterias || 0,
+      total: (stats.riders[nombre]?.servicios || 0) + (stats.riders[nombre]?.baterias || 0),
     })).sort((a, b) => b.total - a.total);
-  }, [stats.riders, riders]);
+  }, [stats.riders, riderNames]);
 
   const handleExportExcel = async () => {
     try {
