@@ -51,6 +51,7 @@ export type ServiceStatus =
   | "En camino"
   | "En el lugar"
   | "Programado"
+  | "Pausado"
   | "Finalizado"
   | "Cancelado";
 

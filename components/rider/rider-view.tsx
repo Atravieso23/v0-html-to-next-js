@@ -7,11 +7,12 @@ import type { RiderName, Service, BatterySale } from "@/lib/types";
 import { getCurrentMoment, getGoogleMapsUrl, getWhatsAppUrl } from "@/lib/helpers";
 import {
   Navigation, MapPin, Phone, MessageCircle, CheckCircle,
-  Clock, Car, Battery, Zap, AlertCircle, LogOut,
+  Clock, Car, Battery, Zap, AlertCircle, LogOut, LayoutList, TableProperties,
 } from "lucide-react";
 import { toast } from "sonner";
 import { CloseServiceDialog } from "@/components/services/close-service-dialog";
 import { CloseBatterySaleDialog } from "@/components/services/close-battery-sale-dialog";
+import { QueueBoard } from "@/components/admin/queue-board";
 
 // ─── Pantalla de selección de rider ───────────────────────────────────────────
 
@@ -453,7 +454,11 @@ function RiderPanel({ rider, onLogout }: { rider: RiderName; onLogout?: () => vo
   const today = getCurrentMoment().fechaInput;
 
   const activeServices = services.filter(
-    (s) => s.estado !== "Finalizado" && s.estado !== "Cancelado" && s.estado !== "Programado"
+    (s) =>
+      s.estado !== "Finalizado" &&
+      s.estado !== "Cancelado" &&
+      s.estado !== "Programado" &&
+      s.estado !== "Pausado"
   );
   const completedToday = services.filter(
     (s) => (s.estado === "Finalizado" || s.estado === "Cancelado") && s.fechaFinInput === today
@@ -653,7 +658,11 @@ function AdminRiderPanel({ rider }: { rider: RiderName }) {
   const today = getCurrentMoment().fechaInput;
 
   const activeServices = services.filter(
-    (s) => s.estado !== "Finalizado" && s.estado !== "Cancelado" && s.estado !== "Programado"
+    (s) =>
+      s.estado !== "Finalizado" &&
+      s.estado !== "Cancelado" &&
+      s.estado !== "Programado" &&
+      s.estado !== "Pausado"
   );
   const completedToday = services.filter(
     (s) => (s.estado === "Finalizado" || s.estado === "Cancelado") && s.fechaFinInput === today
@@ -802,6 +811,7 @@ export function RiderView({
   const riderColors = useAvexStore((state) => state.riderColors);
   const [selectedRider, setSelectedRider] = useState<RiderName | null>(preselectedRider ?? null);
   const [activeTab, setActiveTab] = useState<RiderName>(() => riders[0]?.nombre ?? "");
+  const [adminView, setAdminView] = useState<"cola" | "detalle">("cola");
 
   // ── Modo rider: login + vista propia ──
   if (mode === "rider") {
@@ -816,34 +826,65 @@ export function RiderView({
     );
   }
 
-  // ── Modo admin: tabs con todos ──
+  // ── Modo admin: toggle cola / detalle ──
   return (
     <div>
-      {/* Selector de riders */}
-      <div className="flex gap-2 mb-5">
-        {riders.map((rider) => {
-          const isActive = activeTab === rider.nombre;
-          const color = rider.color || riderColors[rider.nombre] || "#888";
-          return (
-            <button key={rider.nombre} onClick={() => setActiveTab(rider.nombre)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
-                isActive ? "scale-[1.02] shadow-md" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
-              }`}
-              style={isActive ? {
-                backgroundColor: color + "15",
-                borderColor: color,
-                color,
-                boxShadow: `0 4px 12px ${color}30`,
-              } : {}}
-            >
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? color : "#cbd5e1" }} />
-              {rider.nombre}
-            </button>
-          );
-        })}
+      {/* Toggle de vista */}
+      <div className="flex items-center gap-2 mb-5">
+        <button
+          onClick={() => setAdminView("cola")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
+            adminView === "cola"
+              ? "bg-[#1C2333] border-[#1C2333] text-white shadow-md"
+              : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+          }`}
+        >
+          <LayoutList className="h-4 w-4" />
+          Vista Cola
+        </button>
+        <button
+          onClick={() => setAdminView("detalle")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
+            adminView === "detalle"
+              ? "bg-[#1C2333] border-[#1C2333] text-white shadow-md"
+              : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+          }`}
+        >
+          <TableProperties className="h-4 w-4" />
+          Vista Detalle
+        </button>
       </div>
 
-      <AdminRiderPanel rider={activeTab} />
+      {adminView === "cola" ? (
+        <QueueBoard />
+      ) : (
+        <div>
+          {/* Selector de riders */}
+          <div className="flex gap-2 mb-5">
+            {riders.map((rider) => {
+              const isActive = activeTab === rider.nombre;
+              const color = rider.color || riderColors[rider.nombre] || "#888";
+              return (
+                <button key={rider.nombre} onClick={() => setActiveTab(rider.nombre)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all duration-150 ${
+                    isActive ? "scale-[1.02] shadow-md" : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                  }`}
+                  style={isActive ? {
+                    backgroundColor: color + "15",
+                    borderColor: color,
+                    color,
+                    boxShadow: `0 4px 12px ${color}30`,
+                  } : {}}
+                >
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: isActive ? color : "#cbd5e1" }} />
+                  {rider.nombre}
+                </button>
+              );
+            })}
+          </div>
+          <AdminRiderPanel rider={activeTab} />
+        </div>
+      )}
     </div>
   );
 }

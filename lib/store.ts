@@ -73,6 +73,10 @@ interface AvexStore extends AppState {
   addService: (service: Service) => void;
   updateService: (id: string, updates: Partial<Service>) => void;
   deleteService: (id: string) => void;
+  reorderRiderQueue: (rider: string, orderedIds: string[]) => void;
+  pauseService: (id: string) => void;
+  resumeService: (id: string) => void;
+  reassignService: (id: string, newRider: string) => void;
 
   // Actions - Inventario
   updateInventory: (inventory: InventoryState) => void;
@@ -317,6 +321,41 @@ export const useAvexStore = create<AvexStore>()(
           return { servicios: newServicios };
         }),
 
+      reorderRiderQueue: (rider, orderedIds) =>
+        set((state) => {
+          const newServicios = { ...state.servicios };
+          orderedIds.forEach((id, index) => {
+            if (newServicios[id] && newServicios[id].rider === rider) {
+              newServicios[id] = { ...newServicios[id], orden: index + 1 };
+            }
+          });
+          return { servicios: newServicios };
+        }),
+
+      pauseService: (id) =>
+        set((state) => ({
+          servicios: {
+            ...state.servicios,
+            [id]: { ...state.servicios[id], estado: "Pausado" },
+          },
+        })),
+
+      resumeService: (id) =>
+        set((state) => ({
+          servicios: {
+            ...state.servicios,
+            [id]: { ...state.servicios[id], estado: "Pendiente" },
+          },
+        })),
+
+      reassignService: (id, newRider) =>
+        set((state) => ({
+          servicios: {
+            ...state.servicios,
+            [id]: { ...state.servicios[id], rider: newRider },
+          },
+        })),
+
       // Inventario Actions
       updateInventory: (inventory) => set({ inventario: inventory }),
 
@@ -545,7 +584,11 @@ reset: () => set(initialState),
 // --- Selectores ---
 export const selectActiveServices = (state: AvexStore) =>
   Object.values(state.servicios).filter(
-    (s) => s.estado !== "Finalizado" && s.estado !== "Cancelado" && s.estado !== "Programado"
+    (s) =>
+      s.estado !== "Finalizado" &&
+      s.estado !== "Cancelado" &&
+      s.estado !== "Programado" &&
+      s.estado !== "Pausado"
   );
 
 export const selectScheduledServices = (state: AvexStore) =>

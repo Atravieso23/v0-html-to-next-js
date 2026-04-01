@@ -61,6 +61,7 @@ function ServiceCard({
       "En camino": { variant: "default", label: "En camino" },
       "En el lugar": { variant: "default", label: "En el lugar" },
       Programado: { variant: "outline", label: "Programado" },
+      Pausado: { variant: "outline", label: "Pausado" },
       Finalizado: { variant: "default", label: "Finalizado" },
       Cancelado: { variant: "destructive", label: "Cancelado" },
     };
